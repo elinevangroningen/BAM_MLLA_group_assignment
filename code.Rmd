@@ -1,0 +1,336 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Setup notebook
+
+The following libraries are used in for in this notebook:
+```{r message = FALSE}
+# Load libraries
+library(tidyverse)
+library(tidymodels)
+library(readr)
+library(glmnet)
+library(leaps)
+library(naniar)
+```
+
+# Load data listings
+```{r message = FALSE}
+# Read csv with listing information
+data <- read_csv(gzfile("listings.csv.gz"))
+```
+# Select variables of interest
+
+The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Then hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews give information about a listing after it has been published. Therefore, this variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
+
+```{r message = FALSE}
+# Generate subset with variables of interest
+data_sub <- data %>%
+  select(id, 
+         price, 
+         property_type, 
+         room_type, 
+         accommodates, 
+         bathrooms,
+         bedrooms,
+         beds,
+         bed_type, 
+         amenities,
+         host_since, 
+         host_response_time, 
+         host_response_rate, 
+         host_neighbourhood, 
+         host_listings_count, 
+         host_verifications, 
+         host_identity_verified, 
+         neighbourhood_cleansed,
+         square_feet, 
+         cleaning_fee, 
+         guests_included,
+         extra_people, 
+         minimum_nights,
+         maximum_nights, 
+         availability_30,
+         availability_60,
+         availability_90,
+         availability_365,
+         instant_bookable, 
+         cancellation_policy,
+         require_guest_profile_picture,
+         require_guest_phone_verification, 
+         calculated_host_listings_count,
+         calculated_host_listings_count_entire_homes, 
+         calculated_host_listings_count_private_rooms,
+         calculated_host_listings_count_shared_rooms)
+```
+
+```{r}
+# Inspect data
+head(data_sub)
+```
+
+```{r}
+# Inspect data
+str(data_sub)
+```
+
+# Data cleaning
+
+## Basic cleaning
+```{r Converting vectors}
+# Convert columns to factors 
+data_sub$property_type <- factor(data_sub$property_type , 
+                                 levels = unique(data_sub$property_type))
+data_sub$room_type <- factor(data_sub$room_type , 
+                             levels = unique(data_sub$room_type))
+data_sub$bed_type <- factor(data_sub$bed_type , 
+                    levels = unique(data_sub$bed_type))
+data_sub$host_response_time <- factor(data_sub$ host_response_time, 
+                    levels = unique(data_sub$host_response_time))
+data_sub$host_neighbourhood <- factor(data_sub$host_neighbourhood, 
+                    levels = unique(data_sub$host_neighbourhood))
+data_sub$neighbourhood_cleansed <- factor(data_sub$neighbourhood_cleansed, 
+                    levels = unique(data_sub$neighbourhood_cleansed))
+data_sub$cancellation_policy <- factor(data_sub$cancellation_policy , 
+                    levels = unique(data_sub$cancellation_policy))
+```
+
+```{r Convert }
+# Remove $ sign from columns containing prices and convert to doubles
+data_sub$price <- as.double(gsub("[,$]", "", data_sub$price))
+data_sub$cleaning_fee <- as.double(gsub("[,$]", "", data_sub$cleaning_fee))
+data_sub$extra_people <- as.double(gsub("[,$]", "", data_sub$extra_people))
+
+# Replace "N/A" values, remove % and convert to percentage 
+data_sub$host_response_rate <- na_if(data_sub$host_response_rate, "N/A")
+data_sub$host_response_rate <- 
+  as.double(gsub("[%]", "", data_sub$host_response_rate)) / 100
+```
+
+## Clean amenities 
+```{r Generate all unique amenities}
+# Clean and split strings for amenities
+# Returns a list with all unique values
+clean_amenities <- function(x) {
+  subbed <- gsub('[{}\"]', "", tolower(x))
+  splitted <- str_split(subbed, ",")
+  clean <- sapply(splitted, function(x) str_trim(x, side = "both"))
+  return(clean)
+}
+
+# Clean amenities
+data_sub$amenities_clean <- 
+  sapply(data_sub$amenities, function(x) clean_amenities(x))
+
+# Create vector with all unique amenities
+amenities_unique = c()
+for(amenities in data_sub$amenities_clean) {
+  for(element in amenities) {
+    if(!(element %in% amenities_unique) & element != "") {
+      amenities_unique <- append(amenities_unique, str_trim(element))
+    }
+  }
+}
+
+# Show result
+amenities_unique
+```
+
+### Create new variables based information stored in amenities
+```{r Create new variables for amenities}
+# Create variable for WIFI and add to data set
+wifi <- vector()
+for(i in 1:length(data_sub$amenities_clean)) {
+  if("wifi" %in% data_sub$amenities_clean[[i]] | 
+     "internet" %in% data_sub$amenities_clean[[i]]) {
+    wifi[i] <-  "yes"
+  } else {
+    wifi[i] <-  "no"
+  }
+}
+data_sub$wifi <- wifi
+data_sub$wifi <- factor(data_sub$wifi, levels = c("yes", "no"))
+
+# Create variable for pool and add to data set
+pool <- vector()
+for(i in 1:length(data_sub$amenities_clean)) {
+  if("pool" %in% data_sub$amenities_clean[[i]]) {
+    pool[i] <-  "yes"
+  } else {
+    pool[i] <-  "no"
+  }
+}
+data_sub$pool <- pool
+data_sub$pool <- factor(data_sub$pool, levels = c("yes", "no"))
+
+# Create variable for hot_tub and add to data set
+hot_tub <- vector()
+for(i in 1:length(data_sub$amenities_clean)) {
+  if("hot tub" %in% data_sub$amenities_clean[[i]]) {
+    hot_tub[i] <-  "yes"
+  } else {
+    hot_tub[i] <-  "no"
+  }
+}
+data_sub$hot_tub <- hot_tub
+data_sub$hot_tub <- factor(data_sub$hot_tub, levels = c("yes", "no"))
+```
+
+## Clean host verification methods
+```{r Generate unique host verification methods}
+# Clean and split strings for host verification methods
+# Returns a list with all unique values
+clean_verficiations <- function(x) {
+  subbed <- gsub("\\[|\\]", "", tolower(x))
+  subbed_complete <- gsub("[']", "", subbed)
+  splitted <- str_split(subbed_complete, ",")
+  clean <- sapply(splitted, function(x) str_trim(x, side = "both"))
+  return(clean)
+}
+
+# Clean host_verifications
+data_sub$host_verifications_clean <- 
+  sapply(data_sub$host_verifications, function(x) clean_verficiations(x))
+
+# Generate list with all unique host verification methods
+verifications_unique = c()
+for(verifications in data_sub$host_verifications_clean) {
+  for(element in verifications) {
+    if(!(element %in% verifications_unique) & element != "") {
+      verifications_unique <- append(verifications_unique, str_trim(element))
+    }
+  }
+}
+
+# Show result
+verifications_unique
+```
+
+### Create variables based on information stored in host verifications
+```{r Create new variables for host verification method}
+# Create variable for host email and add to data set
+host_email <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("email" %in% data_sub$host_verifications_clean[[i]]) {
+    host_email[i] <-  "yes"
+  } else {
+    host_email[i] <-  "no"
+  }
+}
+data_sub$host_email <- host_email 
+data_sub$host_email <- factor(data_sub$host_email, levels = c("yes", "no"))
+
+# Create variable for phone and add to data set 
+host_phone <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("phone" %in% data_sub$host_verifications_clean[[i]]) {
+    host_phone[i] <-  "yes"
+  } else {
+    host_phone[i] <-  "no"
+  }
+}
+data_sub$host_phone <- host_phone 
+data_sub$host_phone <- factor(data_sub$host_phone, levels = c("yes", "no"))
+ 
+# Create variable for host facebook and add to data set
+host_facebook <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("facebook" %in% data_sub$host_verifications_clean[[i]]) {
+    host_facebook[i] <-  "yes"
+  } else {
+    host_facebook[i] <-  "no"
+  }
+}
+data_sub$host_facebook <- host_facebook 
+data_sub$host_facebook <- 
+  factor(data_sub$host_facebook, levels = c("yes", "no"))
+
+# Create variable for government id 
+host_government_id <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("government_id" %in% data_sub$host_verifications_clean[[i]]) {
+    host_government_id[i] <-  "yes"
+  } else {
+    host_government_id[i] <-  "no"
+  }
+}
+data_sub$host_government_id <- host_government_id 
+data_sub$host_government_id <- 
+  factor(data_sub$host_government_id, levels = c("yes", "no"))
+
+# Create variable for hosts without verification and add to data set
+host_verification_method <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("none" %in% data_sub$host_verifications_clean[[i]]) {
+    host_verification_method[i] <-  "no"
+  } else {
+    host_verification_method[i] <-  "yes"
+  }
+}
+data_sub$host_verification_method <- host_verification_method 
+data_sub$host_verification_method <- 
+  factor(data_sub$host_verification_method, levels = c("yes", "no"))
+```
+
+## Clean date variables 
+```{r Create new variable}
+# Create new variable for active years host 
+data_sub <- data_sub %>% 
+  mutate(host_years_active = 
+           as.double(as.Date("2019-12-07") - host_since) / 365)
+```
+
+## Check missing data
+```{r Missing data check}
+# Count missing cases per variable
+na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
+vars <- colnames(data_sub)
+
+# Extract all variables with na values
+na_values <- tibble(variables = vars, na_count = na_counter) 
+
+na_values %>%
+  filter(na_count > 0) %>%
+  arrange(desc(na_count))
+na_values
+```
+The table above shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
+
+```{r Incomplete cases}
+# Compute incomplete rows
+incomplete_rows <-  
+  which(is.na(data_sub %>% select(host_response_time, host_listings_count, 
+                                  host_identity_verified, beds, bedrooms, 
+                                  host_years_active, bathrooms)))
+unique <- length(unique(incomplete_rows))
+unique
+```
+
+```{r Generate final data set}
+# Select variables for data set
+variables_analysis <-   
+  na_values %>% 
+  filter(na_count <= 158) %>% 
+  select(variables) %>% 
+  pull(variables)
+
+# Create final data set
+data_semi_final <- data_sub %>% select(all_of(variables_analysis))
+data_semi_final <- data_semi_final %>% 
+  select(-c(amenities, amenities_clean, host_verifications,
+            host_verifications_clean))
+data_final <- data_semi_final[complete.cases(data_semi_final), ]
+```
+
+
+
+
+
+
+
+
+
+
+
