@@ -14,6 +14,7 @@ library(readr)
 library(glmnet)
 library(leaps)
 library(naniar)
+library(SentimentAnalysis)
 ```
 
 # Load data listings
@@ -21,6 +22,7 @@ library(naniar)
 # Read csv with listing information
 data <- read_csv(gzfile("listings.csv.gz"))
 ```
+
 # Select variables of interest
 
 The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Then hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews give information about a listing after it has been published. Therefore, this variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
@@ -288,7 +290,7 @@ data_sub <- data_sub %>%
 na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
 vars <- colnames(data_sub)
 
-# Extract all variables with na values
+# Extract all variables with NA-values
 na_values <- tibble(variables = vars, na_count = na_counter) 
 
 na_values %>%
@@ -296,6 +298,7 @@ na_values %>%
   arrange(desc(na_count))
 na_values
 ```
+
 The table above shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
 
 ```{r Incomplete cases}
@@ -312,7 +315,7 @@ unique
 # Select variables for data set
 variables_analysis <-   
   na_values %>% 
-  filter(na_count <= 158) %>% 
+  filter(na_count <= 649) %>% 
   select(variables) %>% 
   pull(variables)
 
@@ -324,11 +327,19 @@ data_semi_final <- data_semi_final %>%
 data_final <- data_semi_final[complete.cases(data_semi_final), ]
 ```
 
-
-# Just for steps using git
+# Create train-test split
 ```{r}
-```
+# Create a train-split sets
+set.seed(123)
+data_split <- initial_split(data_final, prop = 0.7)
+data_train <- training(data_split)
+data_test <- testing(data_split)
 
+# Generate 10-fold CV sets
+set.seed(321)
+data_folds <- vfold_cv(data_train, v = 10)
+data_folds
+```
 
 
 
