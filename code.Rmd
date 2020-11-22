@@ -14,7 +14,6 @@ library(readr)
 library(glmnet)
 library(leaps)
 library(naniar)
-library(SentimentAnalysis)
 ```
 
 # Load data listings
