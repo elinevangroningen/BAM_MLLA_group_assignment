@@ -26,3 +26,246 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+##Libraries used
+```{r}
+library(tidymodels)
+```
+
+##Outlier if removed
+
+```{r}
+#data_no_outliers <- data_final[(data_final[,2]<1500),]
+```
+
+
+## Setting an ordinary linear regression model as the baseline
+
+An ordinary linear regression is set-up as the baseline model. A model will be used with main effects for all parameters.
+```{r}
+ols_linreg <- linear_reg() %>% 
+  set_engine("lm")
+```
+
+Below is the pre-processing recipe. Because it is a pre-processing recipe, it does not need normalization.
+```{r}
+ols_recipe <- recipe(price ~ ., data = data_train) %>% 
+  step_dummy(all_nominal()) 
+```
+
+All of this can be combined in a workflow
+```{r}
+ols_wf <- workflow() %>% 
+  add_recipe(ols_recipe) %>% 
+  add_model(ols_linreg)
+```
+
+We can directly train this on the training set and predict the test set (since there is no tuning to do):
+```{r}
+ols_last_fit <- ols_wf %>% 
+  last_fit(data_split, metrics = metric_set(rmse, mae, rsq_trad))
+```
+
+Here are the results, which provides the baseline performance on the test set
+```{r}
+ols_test_metrics <- ols_last_fit %>% collect_metrics()
+ols_test_metrics
+```
+
+
+##Regularized linear regression using *tidymodels*
+
+##Preprocessing recipes
+In this recipe it has to be ensured that all factors are converted to a numeric representation, and that the columns are normalized. The latter meaning that the mean will be zero and the standard deviation one.
+```{r}
+linreg_recipe <- recipe(price ~ ., data = data_train) %>% 
+  step_dummy(all_nominal()) %>% 
+  step_normalize(-price)
+
+##linreg_recipe <- recipe(price ~ ., data = data_train) %>% 
+  ##step_rm(id, property_type, room_type, bed_type, host_since, host_response_time, host_identity_verified, neighbourhood_cleansed, instant_bookable, cancellation_policy, require_guest_profile_picture, require_guest_phone_verification, wifi, pool, hot_tub, host_email, host_phone, host_facebook, host_government_id, host_verification_method) %>%
+  ##step_dummy(all_nominal()) %>% 
+  ##step_normalize(-price)
+```
+
+```{r}
+linreg_recipe
+```
+
+The following is produced for the for the training data through the recipe
+```{r}
+data_train_baked <- linreg_recipe %>% prep(data_train) %>% bake(data_train)
+head(data_train_baked)
+```
+
+Checking normalization of the means and standard deviations
+```{r}
+round(colMeans(data_train_baked), 8)
+#Checking standard deviations of the previous line
+round(apply(data_train_baked, 2, sd), 8)
+```
+
+
+#Ridge and Lasso Regression Models
+
+
+```{r}
+ridge_linreg <- linear_reg(penalty = tune(), mixture = 0) %>% 
+  set_engine("glmnet")
+lasso_linreg <- linear_reg(penalty = tune(), mixture = 1) %>% 
+  set_engine("glmnet")
+```
+
+```{r}
+ridge_linreg %>% translate()
+```
+
+```{r}
+lasso_linreg %>% translate()
+```
+
+##Combining the models and recipes into workflows
+```{r}
+ridge_wf <- workflow() %>% 
+  add_recipe(linreg_recipe) %>% 
+  add_model(ridge_linreg)
+lasso_wf <- workflow() %>% 
+  add_recipe(linreg_recipe) %>% 
+  add_model(lasso_linreg)
+```
+
+Here is what we are looking for at ridge regressions
+```{r}
+ridge_wf
+```
+
+
+##Tuning grids
+
+```{r}
+grid_lasso <- tibble(penalty = 10^(seq(from = -1, to = 3, length.out = 50)))
+grid_ridge <- tibble(penalty = 10^(seq(from = 1, to = 6, length.out = 50)))
+```
+
+##Tuning the Lasso-penalized linear regression
+
+```{r}
+lasso_tune <- lasso_wf %>% 
+  tune_grid(resamples = train_folds, 
+            grid = grid_lasso,
+            metrics = metric_set(rmse, rsq_trad, mae))
+```
+
+COllecting the measures and creating a plot of the RMSE
+```{r}
+lasso_tune_metrics <- lasso_tune %>% 
+  collect_metrics()
+lasso_tune_metrics %>% filter(.metric == "rmse") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "RMSE", x = expression(lambda))
+```
+
+Showing the best values for $\lambda$
+```{r}
+lasso_tune %>% show_best("rmse")
+```
+
+We can select the tuning parameter by using `select_by_one_std_err()`:
+```{r}
+lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "rmse", desc(penalty))
+lasso_1se_model
+```
+
+Then the workflow for the lasso model can be finalized
+```{r}
+lasso_wf_tuned <- 
+  lasso_wf %>% 
+  finalize_workflow(lasso_1se_model)
+lasso_wf_tuned
+```
+
+
+##Tuning the Ridge-penalized linear regression
+
+
+```{r}
+ridge_tune <- ridge_wf %>% 
+  tune_grid(resamples = train_folds, 
+            grid = grid_ridge,
+            metrics = metric_set(rmse, rsq_trad, mae))
+```
+
+Again the metrics can be collected and a plot can be made of the RMSE:
+```{r}
+ridge_tune_metrics <- ridge_tune %>% 
+  collect_metrics()
+ridge_tune_metrics %>% filter(.metric == "rmse") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() +
+  labs(y = "RMSE", x = expression(lambda))
+```
+
+Showing the bests values for $\lambda$
+```{r}
+ridge_tune %>% show_best("rmse")
+```
+
+We can select the value of our tuning parameter using `select_by_one_std_err()`:
+```{r}
+ridge_1se_model <- select_by_one_std_err(ridge_tune, metric = "rmse", desc(penalty))
+ridge_1se_model
+```
+
+Then the workflow for the ridge model can be finalized
+```{r}
+ridge_wf_tuned <- 
+  ridge_wf %>% 
+  finalize_workflow(ridge_1se_model)
+ridge_wf_tuned
+```
+
+
+##Selecting between OLS, Lasso and Ridge
+
+Last-fit of the Lasso model
+```{r}
+lasso_last_fit <- lasso_wf_tuned %>% 
+  last_fit(data_split, metrics = metric_set(rmse, mae, rsq_trad))
+```
+
+The performance of the Lasso model on the test set is shown below
+```{r}
+lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics
+```
+
+The same last-fit can be derived for the Ridge model
+```{r}
+ridge_last_fit <- ridge_wf_tuned %>% 
+  last_fit(data_split, metrics = metric_set(rmse, mae, rsq_trad))
+ridge_test_metrics <- ridge_last_fit %>% collect_metrics()
+ridge_test_metrics
+```
+
+A table can be made to show the results of the different models on the test set
+```{r}
+lasso_test_metrics <- lasso_test_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "lasso")
+ridge_test_metrics <- ridge_test_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "ridge")
+ols_test_metrics <- ols_test_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "ols")
+bind_rows(lasso_test_metrics, ridge_test_metrics, ols_test_metrics) %>% 
+  pivot_wider(names_from = .metric, values_from = .estimate)
+```
+

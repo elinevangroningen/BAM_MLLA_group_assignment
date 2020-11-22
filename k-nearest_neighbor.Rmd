@@ -1,0 +1,298 @@
+---
+title: "k-nearest_neigbor"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+##Packages used
+
+```{r}
+library("tidyverse")
+library("tidymodels")
+library("knitr")
+```
+
+##Random Number Generator
+
+```{r}
+
+```
+
+
+##Linear Regression Model
+
+Specifying the model template
+```{r}
+lm_mod <- linear_reg() %>% 
+  set_engine("lm")
+lm_mod
+```
+
+For the main model main effects of the linear model on the train data we have:
+```{r}
+lm_fit <- lm_mod %>% 
+  fit(price ~ ., data = data_train) %>%
+  step_rm(id, host_identity_verified, instant_bookable, require_guest_profile_picture, require_guest_phone_verification, wifi, pool, hot_tub, host_email, host_phone, host_facebook, host_government_id, host_verification_method)
+  
+```
+
+Information on the train model
+```{r}
+lm_fit
+```
+
+Here some values for the test set are predicted
+```{r}
+lm_preds <- predict(lm_fit, new_data = data_test)
+head(lm_preds)
+```
+
+The RMSE can be calculated as follows:
+```{r}
+
+```
+
+
+```{r}
+data_test %>% 
+  mutate(lm_preds = lm_preds$.pred) %>% 
+  summarize(rmse = sqrt(mean((lm_preds - Sales)^2)))
+```
+
+
+```{r}
+
+```
+
+
+##Setting up a workflow
+
+```{r}
+lm_mod <- linear_reg() %>% 
+  set_engine("lm")
+```
+
+
+```{r}
+lm_mod_recipe <- 
+  recipe(price ~ ., data = data_train)
+```
+
+These specification of the model outline and the recipe can be combined into a workflow as follows:
+```{r}
+lm_mod_workflow <- 
+  workflow() %>% 
+  add_model(lm_mod) %>% 
+  add_recipe(lm_mod_recipe)
+```
+
+The resulting workflow:
+```{r}
+lm_mod_workflow
+```
+
+fit() can be used on the workflow
+```{r}
+lm_mod_workflow %>% fit(data_train)
+```
+
+
+
+##K-nearest neighbor Regression
+
+
+```{r}
+set.seed(91231)
+data_train_val <- validation_split(data_train, prop = 0.7)
+
+data_train_val
+```
+
+
+###Setting up a tuning grid
+
+
+```{r}
+knn_regr_tune_grid <- tibble(neighbors = 1:8*2 - 1)
+knn_regr_tune_grid
+```
+
+###Specifying corresponding workflow
+
+
+```{r}
+knn_regr_mod <- nearest_neighbor(neighbors = tune()) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn", scale = FALSE)
+```
+
+Through the following command you can see that this model is used for training the model
+```{r}
+knn_regr_mod %>% translate()
+```
+
+Creating the recipe, and ensuring normalization of all predictors
+```{r}
+knn_regr_recipe <- 
+  recipe(price ~ ., data = data_train) %>% 
+  step_normalize(all_predictors())
+```
+
+Overview of the recipe
+```{r}
+knn_regr_recipe
+```
+
+
+```{r}
+data_train_baked <- knn_regr_recipe %>% prep(data_train) %>% bake(data_train)
+data_train_baked %>% head()
+```
+
+The workflow then is:
+```{r}
+knn_regr_workflow <-
+  workflow() %>% 
+  add_model(knn_regr_mod) %>% 
+  add_recipe(knn_regr_recipe)
+
+knn_regr_workflow
+```
+
+The 'data_train_baked' can be removed because it is not necessary anymore
+```{r}
+rm(data_train_baked)
+```
+
+
+##Tuning the number of nearest neighbors
+
+A grid search is used to search over the grid for potential values, by using a validation set as follows:
+```{r}
+knn_regr_tune_res <- knn_regr_workflow %>% 
+  tune_grid(resamples = data_train_val, 
+            grid = knn_regr_tune_grid,
+```
+
+
+```{r}
+metrics = metric_set(rmse, rsq_trad, mae))
+```
+
+
+```{r}
+```
+
+The metrics can be collected as follows:
+```{r}
+knn_regr_tune_res %>% collect_metrics()
+```
+
+The metrics can be plotted as well
+```{r}
+knn_regr_tune_res %>% collect_metrics() %>% 
+  ggplot(aes(x = neighbors, y = mean)) + 
+  geom_point() + geom_line() + 
+  facet_wrap(~ .metric, scales = "free_y")
+```
+
+Using the validation set, we can select the best k neighbors, by looking at the different metrics
+```{r}
+knn_regr_tune_res %>% 
+  show_best("rmse", n = 3) %>% 
+  arrange(neighbors)
+```
+
+
+##Finalizing the workflow
+
+Before the workflow can be finalized, the information which shows which model has the best value for the tuning parameter
+```{r}
+knn_regr_best_model <- select_best(knn_regr_tune_res, metric = "rmse")
+knn_regr_best_model
+```
+
+A finalized workflow, which specifies which k neighbors parameter is used from now on
+```{r}
+knn_regr_workflow_final <- 
+  knn_regr_workflow %>% 
+  finalize_workflow(knn_regr_best_model)
+```
+
+This can be retained on the entire training set as follows:
+```{r}
+knn_regr_workflow_final %>% fit(data = data_train)
+```
+
+
+
+##Selecting between linear regression and k-nearest neighbor
+
+Specifying the metrics for the linear regression:
+```{r}
+lm_last_fit <- lm_mod_workflow %>% 
+  last_fit(ads_splits, metrics = metric_set(rmse, mae, rsq_trad))
+```
+
+The performance of this model on the test set is:
+```{r}
+lm_metrics <- lm_last_fit %>% collect_metrics()
+lm_metrics
+```
+
+Specifying the metrics for the knn-nearest neighbors model
+```{r}
+knn_regr_last_fit <- knn_regr_workflow_final %>% 
+  last_fit(ads_splits, metrics = metric_set(rmse, mae, rsq_trad))
+```
+
+The performance of this model on the test set is:
+```{r}
+knn_regr_metrics <- knn_regr_last_fit %>% 
+  collect_metrics()
+knn_regr_metrics
+```
+
+The above information can be brought into one object, as:
+```{r}
+lm_metrics <- lm_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "lm")
+knn_regr_metrics <- knn_regr_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "knn")
+bind_rows(lm_metrics, knn_regr_metrics) %>% 
+  pivot_wider(names_from = .metric, values_from = .estimate)
+```
+From this object it can be seen which model performs better
+
+
+For dilligence another test might be considered. Are there any specific parts in the data for which the averages used in the above models do not work? This can be testen and based on the predictions for the test set, which we can obtain for example using:
+```{r}
+lm_last_fit %>% collect_predictions()
+```
+
