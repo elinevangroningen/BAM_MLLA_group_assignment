@@ -1,0 +1,99 @@
+---
+title: "RF"
+author: "Kylian van Noordenne"
+date: "22-11-2020"
+output: html_document
+---
+
+Within this section, a random forest will be created. FIrst a preprocessing recipe is created. 
+
+```{r libraries }
+library(ranger)
+library(doParallel)
+library(themis)
+```
+
+```{r Recipe}
+rf_recipe <- recipe(price ~ bedrooms + beds + host_identity_verified + guests_included + extra_people + pool, data = data_train) 
+rf_recipe
+```
+
+Specify random forest with 500 trees
+```{r }
+tune_spec <- rand_forest(mtry = tune(), trees = 500) %>%
+  set_engine("ranger")
+```
+
+Combine the recipe and the model into a workflow that can be tuned
+```{r }
+tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(tune_spec)
+```
+
+We create a metric set that calculates the Root Mean Square Error (rmse), the Mean Absolute Error (mae) and the R-squared (rsq_trad)
+```{r }
+class_metrics <- metric_set(rmse, mae, rsq_trad)
+```
+
+The command bellow allows us to do computations in paallel
+```{r }
+registerDoParallel()
+```
+
+```{r }
+set.seed(12345)
+tune_res <- tune_grid(
+  tune_wf,
+  resamples = data_folds,
+  grid = 10,
+  metrics = class_metrics
+)
+tune_res
+```
+
+```{r }
+tune_res %>%
+  collect_metrics()
+```
+A plot for finding the best mtry, based on the criteria of the rmse. A lower rmse would indicate a better results, as a lower value indicates a lower error of prediction. 
+```{r }
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>% 
+  ggplot(aes(x = mtry, y = mean)) +
+  geom_line() +
+  geom_point() +
+  labs(y = "rmse")
+```
+
+!!! CHANGE !!!! this command allows me to see 
+```{r }
+tune_res %>% show_best("rmse")
+```
+Now select the best model based on the rmse criteria
+```{r }
+best_rmse <- select_best(tune_res, "rmse")
+final_rf <- finalize_workflow(tune_wf, best_rmse)
+final_rf
+```
+
+Now we can train the finalized workflow on our entire training rest
+```{r }
+final_res <- final_rf %>%
+  last_fit(data_split, metrics = class_metrics)
+```
+
+The results based on the test set will be 
+```{r }
+final_res %>%
+  collect_metrics()
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
