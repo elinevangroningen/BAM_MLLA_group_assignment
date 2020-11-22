@@ -13,19 +13,38 @@ library(doParallel)
 library(themis)
 ```
 
+```{r Basic RF}
+rf <- randomForest(price ~ bedrooms + beds + host_identity_verified + guests_included + extra_people + pool, data = data_train)
+
+```
+
+Plot the random forest
+```{r Importance}  
+varImpPlot(rf)
+```
+
+
+Plot the random forest
+```{r Trees}  
+plot(rf)
+```
+
+
 ```{r Recipe}
 rf_recipe <- recipe(price ~ bedrooms + beds + host_identity_verified + guests_included + extra_people + pool, data = data_train) 
 rf_recipe
 ```
 
-Specify random forest with 500 trees
-```{r }
-tune_spec <- rand_forest(mtry = tune(), trees = 500) %>%
+As the previous plot shows, there is not much decrease in after a certain threshold. In order to save computational time, we 
+specify a random forest with 200 trees
+```{r Specify}
+tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
   set_engine("ranger")
 ```
 
 Combine the recipe and the model into a workflow that can be tuned
-```{r }
+
+```{r Workflow}
 tune_wf <- workflow() %>%
   add_recipe(rf_recipe) %>%
   add_model(tune_spec)
