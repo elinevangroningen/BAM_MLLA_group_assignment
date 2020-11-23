@@ -11,27 +11,8 @@ Within this section, a random forest will be created. FIrst a preprocessing reci
 library(ranger)
 library(doParallel)
 library(themis)
-```
-
-
-```{r Basic RF}
-library(randomForest)
-rf <- randomForest(price ~ bedrooms + beds + host_identity_verified + guests_included + extra_people + pool, data = data_train)
-rf
-
-```
-
-
-```{r Importance} 
-# Variable importance plot
-varImpPlot(rf)
-```
-
-
-
-```{r Trees} 
-# Random forest plot
-plot(rf)
+library(tibble)
+library(vip)
 ```
 
 Setting up a recipe. The id variable is uptaded to a seperate role, instead of being a predictor. 
@@ -42,10 +23,10 @@ rf_recipe <- recipe(price ~ ., data = data_train) %>%
 rf_recipe
 ```
 
-As the previous plot shows, there is not much decrease in after a certain threshold. In order to save computational time, we specify a random forest with 100 trees
+
 ```{r Specify}
 # Tune specification
-tune_spec <- rand_forest(mtry = tune(), trees = 100) %>%
+tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
   set_engine("ranger")
 ```
 
@@ -67,14 +48,18 @@ The command bellow allows us to do computations in parallel
 registerDoParallel()
 ```
 
+Here I tune the grid. The values chosen as mtry are 6, 10, 15, 16 & 21, as these were my best values, before tuning my grid (based on the lower MAE criteria).
+```{r Tune grid}
+tunegrid <- tibble(mtry = c(6, 10, 15, 16, 21))
+```
 
-```{r Tune Grid}
+```{r Grid}
 # Tune the grid
 set.seed(12345)
 tune_res <- tune_grid(
   tune_wf,
   resamples = data_folds,
-  grid = 10,
+  grid = tunegrid,
   metrics = class_metrics
 )
 tune_res
@@ -120,10 +105,23 @@ final_res %>%
   collect_metrics()
 ```
 
+Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. 
 ```{r }
+# Refit the model
+rf_model_vi <- rand_forest(mtry = 6, trees = 200) %>%
+  set_engine("ranger", importance = "permutation")
 
+rf_vi_wf <- workflow() %>% 
+  add_model(rf_model_vi) %>% 
+  add_recipe(rf_recipe)
+
+# Fit the model again
+set.seed(12345)
+rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
 ```
 
 ```{r }
+rf_vi_fit %>% pull_workflow_fit() %>% vi()
 
+rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point")
 ```
