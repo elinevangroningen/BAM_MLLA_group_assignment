@@ -120,8 +120,9 @@ set.seed(12345)
 rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
 ```
 
+We can use the refitted model in order the gather the variable importance 
 ```{r }
+# Variable importance 
 rf_vi_fit %>% pull_workflow_fit() %>% vi()
 
-rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point")
 ```
