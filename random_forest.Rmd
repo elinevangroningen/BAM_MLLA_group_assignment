@@ -23,7 +23,7 @@ rf_recipe <- recipe(price ~ ., data = data_train) %>%
 rf_recipe
 ```
 
-
+Within this section the tune specificaiton are mentioned. THe mtry will be tuned later on. Different values for trees where tested (200, 500 & 1000). As is indicated that increase the amount of trees did not have much impact on the result, trees of 200 are chosen to save computational time. 
 ```{r Specify}
 # Tune specification
 tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
@@ -40,6 +40,7 @@ tune_wf <- workflow() %>%
 
 We create a metric set that calculates the Root Mean Square Error (rmse), the Mean Absolute Error (mae) and the R-squared (rsq_trad)
 ```{r Class metrics}
+# Class metrics specification 
 class_metrics <- metric_set(rmse, mae, rsq_trad)
 ```
 
@@ -48,8 +49,9 @@ The command bellow allows us to do computations in parallel
 registerDoParallel()
 ```
 
-Here I tune the grid. The values chosen as mtry are 6, 10, 15, 16 & 21, as these were my best values, before tuning my grid (based on the lower MAE criteria).
+Here I tune the grid. I first did not specify my grid and found that the optimal solutions, based on the MAE criteria, were an mtry of 6, 10, 15, 16 & 21. Therefore, these values were taken as mtry input to save computational time.  
 ```{r Tune grid}
+# Define the tune grid 
 tunegrid <- tibble(mtry = c(6, 10, 15, 16, 21))
 ```
 
@@ -66,15 +68,18 @@ tune_res
 ```
 
 ```{r Collect metrics}
+# Collect metrics
 tune_res %>%
   collect_metrics()
 ```
 A plot for finding the best mtry, based on the criteria of the mae. A lower mae would indicate a better results, as a lower value indicates a lower error of prediction. 
 ```{r Plot MAE}
+# Plot the MAE based
 tune_res %>%
   collect_metrics() %>%
   filter(.metric == "mae") %>% 
-  ggplot(aes(x = mtry, y = mean)) +
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err)) +
+  geom_errorbar() + 
   geom_line() +
   geom_point() +
   labs(y = "mae")
@@ -82,10 +87,12 @@ tune_res %>%
 
 This command allows me to see the best predictions based on the MAE criteria. 
 ```{r Best MAE}
+# Find the mtry with the best MAE
 tune_res %>% show_best("mae")
 ```
-Now select the best model based on the mae criteria
+Now select the best model based on the MAE criteria and finalise the workflow 
 ```{r Best model}
+# Best model selection
 best_rmse <- select_best(tune_res, "mae")
 final_rf <- finalize_workflow(tune_wf, best_rmse)
 final_rf
@@ -101,6 +108,7 @@ final_res <- final_rf %>%
 The results based on the test set will be 
 ```{r }
 # Score on test data
+set.seed(54321)
 final_res %>%
   collect_metrics()
 ```
@@ -124,5 +132,4 @@ We can use the refitted model in order the gather the variable importance
 ```{r }
 # Variable importance 
 rf_vi_fit %>% pull_workflow_fit() %>% vi()
-
 ```
