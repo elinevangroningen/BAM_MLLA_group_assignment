@@ -96,14 +96,6 @@ data_sub$neighbourhood_cleansed <- factor(data_sub$neighbourhood_cleansed,
                     levels = unique(data_sub$neighbourhood_cleansed))
 data_sub$cancellation_policy <- factor(data_sub$cancellation_policy , 
                     levels = unique(data_sub$cancellation_policy))
-
-# Convert logical variables to factors
-data_sub$host_identity_verified <- factor(data_sub$host_identity_verified)
-data_sub$instant_bookable <- factor(data_sub$instant_bookable)
-data_sub$require_guest_profile_picture <- 
-  factor(data_sub$require_guest_profile_picture)
-data_sub$require_guest_phone_verification <- 
-  factor(data_sub$require_guest_phone_verification)
 ```
 
 ```{r Convert }
@@ -268,6 +260,19 @@ for(i in 1:length(data_sub$host_verifications_clean)) {
 data_sub$host_government_id <- host_government_id 
 data_sub$host_government_id <- 
   factor(data_sub$host_government_id, levels = c("yes", "no"))
+
+# Create variable for hosts without verification and add to data set
+host_verification_method <- vector()
+for(i in 1:length(data_sub$host_verifications_clean)) {
+  if("none" %in% data_sub$host_verifications_clean[[i]]) {
+    host_verification_method[i] <-  "no"
+  } else {
+    host_verification_method[i] <-  "yes"
+  }
+}
+data_sub$host_verification_method <- host_verification_method 
+data_sub$host_verification_method <- 
+  factor(data_sub$host_verification_method, levels = c("yes", "no"))
 ```
 
 ## Clean date variables 
@@ -276,28 +281,6 @@ data_sub$host_government_id <-
 data_sub <- data_sub %>% 
   mutate(host_years_active = 
            as.double(as.Date("2019-12-07") - host_since) / 365)
-```
-
-# Inspect explantory variable
-```{r}
-# Plot distribution price
-ggplot(data = data_sub , aes(price)) +
-  geom_histogram(col="black",
-                 breaks=seq(0, 9000, by=75),
-                 aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
-  
-# Plot distribution price with cutoff at 1500
-ggplot(data = data_sub , aes(price)) +
-  geom_histogram(col="black",
-                 breaks=seq(0, 1500, by=10),
-                 aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
-
-data_sub %>% summarize(mean(price))
-data_sub %>% filter(price <= 1500) %>% summarize(mean(price))
 ```
 
 ## Check missing data
@@ -309,10 +292,10 @@ vars <- colnames(data_sub)
 # Extract all variables with NA-values
 na_values <- tibble(variables = vars, na_count = na_counter) 
 
-# Check na count per variable
 na_values %>%
   filter(na_count > 0) %>%
   arrange(desc(na_count))
+na_values
 ```
 
 The table above shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
