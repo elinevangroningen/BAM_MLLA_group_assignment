@@ -1,18 +1,177 @@
 ---
-title: "R Notebook"
+title: "R code for Regularized Regression"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+##Creating Log price
 
 ```{r}
-plot(cars)
+data_final$logprice <- log(data_final$price)
+
+#summary(data_final$logprice) #has inf values because of log(0)
+data_final$logprice[which(!is.finite(data_final$logprice))] <- 0 #add 0 where the value is inf
+
+#repeat train split as the data in final data was modified
+# Create a train-split sets 
+set.seed(123)
+data_split <- initial_split(data_final, prop = 0.7)
+data_train <- training(data_split)
+data_test <- testing(data_split)
+
+# Generate 10-fold CV sets
+set.seed(321)
+data_folds <- vfold_cv(data_train, v = 10)
+data_folds
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+## Linear Lasso Reqularized Regression Model
+
+In this section, regularized regression model will be speficied and trained. Lasso penalty is chosen to simultaneously perform subset selection. 
+Therefore, mixture is set to 1 in the model specification. 
+
+## Model specification
+Specification of lasso-regularized logistic regression model, where the penalty parameter will be tuned:
+```{r}
+lasso_linreg <- linear_reg(penalty = tune(), mixture = 1) %>% 
+  set_engine("glmnet")
+
+#check that model specified correctly:
+lasso_linreg %>% translate()
+```
+
+## Preprocessing recipe
+
+In this section, the recipe is formulated. All the variables included in the final dataset are included in the recipe, in order to perform the subset selection through the lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
+
+did not include: availability_90 and availability_365, and the specific variables for calculated_host_listings_count_
+
+```{r}
+lasso_recipe <-  recipe(logprice ~ property_type + room_type + accommodates + bathrooms + bedrooms + beds +
+                          bed_type  + host_response_time + host_listings_count + host_identity_verified +
+                          neighbourhood_cleansed + guests_included + extra_people + minimum_nights + 
+                          maximum_nights + availability_30 + instant_bookable + cancellation_policy +
+                          require_guest_profile_picture + require_guest_phone_verification + 
+                          calculated_host_listings_count + wifi + pool + hot_tub + host_email + host_phone +
+                          host_facebook + host_government_id + host_years_active, 
+                          data = data_train) %>% 
+                        step_other(property_type, bed_type,  threshold = 0.01, other = "other values") %>% 
+                        step_dummy(all_nominal(), -all_outcomes()) %>%
+                        step_normalize(all_predictors(), -all_outcomes())
+
+lasso_recipe
+```
+
+Testing that this works properly:
+```{r}
+data_baked <- lasso_recipe %>% prep(data_train) %>% bake(data_train)
+head(data_baked)
+```
+
+
+
+
+## Create Lasso Workflow
+```{r}
+lasso_wf <- workflow() %>% 
+  add_recipe(lasso_recipe) %>% 
+  add_model(lasso_linreg)
+lasso_wf
+```
+
+## Tuning grids
+Next, the $\lambda$ parameter of the lasso model will be tuned. For that purpose, a tuning grid is specified. 
+```{r}
+grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = 1, length.out = 70)))
+```
+
+## Tuning lasso-penalized linear regression
+
+10-k-cross-validation is used to tune the lasso-penalized linear regression:
+```{r}
+lasso_tune <- lasso_wf %>% 
+  tune_grid(resamples = data_folds, 
+            grid = grid_lasso,
+            metrics = metric_set(mae, rmse, rsq_trad))
+```
+
+Plot the metrics against lambda:
+```{r}
+lasso_tune_metrics <- lasso_tune %>% 
+  collect_metrics()
+lasso_tune_metrics %>% filter(.metric == "rmse") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "RMSE", x = expression(lambda))
+
+lasso_tune_metrics %>% filter(.metric == "rsq_trad") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "rsq_trad", x = expression(lambda))
+
+lasso_tune_metrics %>% filter(.metric == "mae") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "mae", x = expression(lambda))
+
+```
+
+
+Next, the best model with the best value of Lambda is selected. It can be seen that as the RMSE is more sensitive for large residuals, the std errors of this metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, mean absolute error is used to select the best model. 
+
+```{r}
+lasso_tune %>% show_best("mae")
+```
+
+The best model is selected using the one standard error rule, where the simplest model that has mae inside one standard error from the absolute best model is chosen to avoid overfitting.
+```{r}
+lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "mae", desc(penalty))
+lasso_1se_model
+```
+As can be seen, the best model has penalty parameter of 0.007.
+
+
+Finalize the workflow:
+```{r}
+lasso_wf_tuned <- 
+  lasso_wf %>% 
+  finalize_workflow(lasso_1se_model)
+lasso_wf_tuned
+```
+
+
+```{r}
+lasso_last_fit <- lasso_wf_tuned %>% 
+  last_fit(data_split, metrics = metric_set(mae, rmse, rsq_trad))
+```
+
+The performance on the test set for this model is:
+```{r}
+lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics
+```
+
+
+To assess the importance of the predictor variables, model parameter estimates are calulated below:
+```{r}
+lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
+
+```
+
+As lasso performs subset selection automatically, some variables have coefficient of zero. 
+
+
+
+
+
+
