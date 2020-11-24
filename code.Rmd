@@ -218,6 +218,24 @@ for(verifications in data_sub$host_verifications_clean) {
 verifications_unique
 ```
 
+The target variable has a distribution as followed 
+```{r}
+# Plot distribution price
+ggplot(data = data_sub , aes(price)) +
+  geom_histogram(col="black",
+                 breaks=seq(0, max(data_sub$price), by=75),
+                 aes(fill=..count..)) +
+  labs(title="Histogram for Price", x="Price", y="Count") +
+  scale_fill_gradient("Count", low="green", high="red")
+```
+
+
+As the previous plot indicates, there are some extreme values. In order to de-emphasis those large values, we decided to log transform the price variable. The + 1 is used to avoid get NA/inf values. 
+```{r Log transformation}
+# Log transformation of price
+data_sub$price <- log(data_sub$price + 1)
+```
+
 ### Create variables based on information stored in host verifications
 
 We created sepearte variables for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
@@ -376,11 +394,6 @@ ggplot(data = data_train , aes(log(price))) +
   scale_fill_gradient("Count", low="green", high="red")
 ```
 
-```{r}
-# Log transform price in both training and test set
-data_train$price <- log(data_train$price + 1)
-data_test$price <- log(data_test$price + 1)
-```
 
 # K-fold cross validation 
 
