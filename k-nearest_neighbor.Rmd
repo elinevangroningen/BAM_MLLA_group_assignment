@@ -88,10 +88,10 @@ rm(data_train_baked)
 
 ##Tuning the number of nearest neighbors
 
-A grid search is used to search over the grid for potential values, by using a validation set as follows:
+A grid search is used to search over the grid for potential values, by using a cross-validation set as follows:
 ```{r}
 knn_regr_tune_res <- knn_regr_workflow %>% 
-  tune_grid(resamples = data_train_val, 
+  tune_grid(resamples = data_folds, 
             grid = knn_regr_tune_grid,
             metrics = metric_set(rmse, rsq_trad, mae))
 ```
