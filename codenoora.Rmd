@@ -2,30 +2,6 @@
 title: "R code for Regularized Regression"
 output: html_notebook
 ---
-
-##Creating Log price
-
-```{r message = FALSE}
-data_final$logprice <- log(data_final$price)
-
-#summary(data_final$logprice) #has inf values because of log(0)
-data_final$logprice[which(!is.finite(data_final$logprice))] <- 0 #add 0 where the value is inf
-
-#repeat train split as the data in final data was modified
-# Create a train-split sets 
-set.seed(123)
-data_split <- initial_split(data_final, prop = 0.7)
-data_train <- training(data_split)
-data_test <- testing(data_split)
-
-# Generate 10-fold CV sets
-set.seed(321)
-data_folds <- vfold_cv(data_train, v = 10)
-data_folds
-```
-
-
-
 ## Linear Lasso Reqularized Regression Model
 
 In this section, regularized regression model will be speficied and trained. Lasso penalty is chosen to simultaneously perform subset selection. 
@@ -45,10 +21,8 @@ lasso_linreg %>% translate()
 
 In this section, the recipe is formulated. All the variables included in the final dataset are included in the recipe, in order to perform the subset selection through the lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
 
-did not include: availability_90 and availability_365, and the specific variables for calculated_host_listings_count_
-
 ```{r}
-lasso_recipe <-  recipe(logprice ~ ., 
+lasso_recipe <-  recipe(price ~ ., 
                           data = data_train) %>% 
                         update_role(id, host_since, new_role = "ID") %>%
                         step_other(property_type, bed_type,  threshold = 0.01, other = "other values") %>% 
