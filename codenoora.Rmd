@@ -1,5 +1,5 @@
 ---
-title: "R code for Regularized Regression"
+title: "R code for Lasso Regularized Regression"
 output: html_notebook
 ---
 ## Linear Lasso Reqularized Regression Model
@@ -9,7 +9,7 @@ Therefore, mixture is set to 1 in the model specification.
 
 ## Model specification
 Specification of lasso-regularized logistic regression model, where the penalty parameter will be tuned:
-```{r message = FALSE}
+```{r, message=FALSE}
 lasso_linreg <- linear_reg(penalty = tune(), mixture = 1) %>% 
   set_engine("glmnet")
 
@@ -18,13 +18,12 @@ lasso_linreg %>% translate()
 ```
 
 ## Preprocessing recipe
-
 In this section, the recipe is formulated. All the variables included in the final dataset are included in the recipe, in order to perform the subset selection through the lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
 
 ```{r}
 lasso_recipe <-  recipe(price ~ ., 
                           data = data_train) %>% 
-                        update_role(id, host_since, new_role = "ID") %>%
+                        update_role(id, new_role = "ID") %>%
                         step_other(property_type, bed_type,  threshold = 0.01, other = "other values") %>% 
                         step_dummy(all_nominal(), -all_outcomes()) %>%
                         step_normalize(all_predictors(), -all_outcomes())
@@ -38,8 +37,7 @@ data_baked <- lasso_recipe %>% prep(data_train) %>% bake(data_train)
 head(data_baked)
 ```
 
-
-## Create Lasso Workflow
+# Create Lasso Workflow
 ```{r message = FALSE}
 lasso_wf <- workflow() %>% 
   add_recipe(lasso_recipe) %>% 
@@ -54,7 +52,6 @@ grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = 1, length.out = 70)))
 ```
 
 ## Tuning lasso-penalized linear regression
-
 10-k-cross-validation is used to tune the lasso-penalized linear regression:
 ```{r}
 lasso_tune <- lasso_wf %>% 
@@ -90,9 +87,7 @@ lasso_tune_metrics %>% filter(.metric == "mae") %>%
   geom_point() + 
   scale_x_log10() + 
   labs(y = "mae", x = expression(lambda))
-
 ```
-
 
 Next, the Lambda value which results in best model performance on the train set is selected. It can be seen that as the RMSE is more sensitive for large residuals, the std errors of this metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, mean absolute error is used to select the best model. 
 ```{r}
@@ -113,7 +108,6 @@ lasso_wf_tuned <-
   finalize_workflow(lasso_1se_model)
 lasso_wf_tuned
 ```
-
 ```{r}
 lasso_last_fit <- lasso_wf_tuned %>% 
   last_fit(data_split, metrics = metric_set(mae, rmse, rsq_trad))
@@ -129,8 +123,7 @@ To assess the importance of the predictor variables, model parameter estimates a
 ```{r}
 lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
 ```
-
-As lasso performs subset selection automatically, some variables have coefficient of zero. 
+As lasso performs subset selection automatically, some variables have coefficient of zero. There is multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listing. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
 
 
