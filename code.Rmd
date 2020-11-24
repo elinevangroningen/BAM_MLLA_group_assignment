@@ -218,27 +218,9 @@ for(verifications in data_sub$host_verifications_clean) {
 verifications_unique
 ```
 
-The target variable has a distribution as followed 
-```{r}
-# Plot distribution price
-ggplot(data = data_sub , aes(price)) +
-  geom_histogram(col="black",
-                 breaks=seq(0, max(data_sub$price), by=75),
-                 aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
-```
-
-
-As the previous plot indicates, there are some extreme values. In order to de-emphasis those large values, we decided to log transform the price variable. The + 1 is used to avoid get NA/inf values. 
-```{r Log transformation}
-# Log transformation of price
-data_sub$price <- log(data_sub$price + 1)
-```
-
 ### Create variables based on information stored in host verifications
 
-We created sepearte variables for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
+We created separate variables for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
 ```{r Create new variables for host verification method}
 # Create variable for host email and add to data set
 host_email <- vector()
@@ -365,7 +347,8 @@ data_final <- data_semi_final[complete.cases(data_semi_final), ]
 For further analyis the data is split into a train-test set.
 ```{r}
 # Create a train-split sets
-set.seed(123)
+seed_x <-  123
+set.seed(seed_x)
 data_split <- initial_split(data_final, prop = 0.7)
 data_train <- training(data_split)
 data_test <- testing(data_split)
@@ -387,13 +370,24 @@ ggplot(data = data_train , aes(price)) +
 In order to prevent this potential problems we have created a new distribution plot with a log transformed variable *price*. The plot shows that the distribution is less skewed and does not contain any large outliers. Resulting, the data that is more interpretable. Therefore, log transforming we will use the log transformed *price* for our models. 
 ```{r}
 # Plot distribution price
-ggplot(data = data_train , aes(log(price))) +
+ggplot(data = data_train , aes(log(price + 1))) +
   geom_histogram(col="black",
                  aes(fill=..count..)) +
   labs(title="Histogram for Ln Price", x="Ln Price", y="Count") +
   scale_fill_gradient("Count", low="green", high="red")
 ```
 
+```{r}
+# Log transform the price in for both training and test set
+data_final$price <- log(data_final$price + 1)
+
+# Resplit the data using the same seed 
+set.seed(seed_x)
+data_split <- initial_split(data_final, prop = 0.7)
+data_train <- training(data_split)
+data_test <- testing(data_split)
+
+```
 
 # K-fold cross validation 
 
@@ -405,7 +399,13 @@ data_folds <- vfold_cv(data_train, v = 10)
 data_folds
 ```
 
-
+# Remove data frames to avoid leakages and errors
+```{r}
+rm(data)
+rm(data_sub)
+rm(data_semi_final)
+rm(na_values)
+```
 
 
 
