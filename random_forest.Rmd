@@ -5,8 +5,7 @@ date: "22-11-2020"
 output: html_document
 ---
 
-Within this section, a random forest will be created. FIrst a preprocessing recipe is created. 
-
+# Packages 
 ```{r libraries }
 library(ranger)
 library(doParallel)
@@ -15,47 +14,26 @@ library(tibble)
 library(vip)
 ```
 
-
-```{r }
-data_final$logprice <- log(data_final$price)
-
-data_final$price <- NULL
-
-# Summary(data_final$logprice) #has inf values because of log(0)
-
-data_final$logprice[which(!is.finite(data_final$logprice))] <- 0 #add 0 where the value is inf
-
-# Repeat train split as the data in final data was modified
-# Create a train-split sets 
-
-set.seed(123)
-data_split <- initial_split(data_final, prop = 0.7)
-data_train <- training(data_split)
-data_test <- testing(data_split)
-
-# Generate 10-fold CV sets
-set.seed(321)
-data_folds <- vfold_cv(data_train, v = 10)
-data_folds
-``` 
-
-Setting up a recipe. The id variable is uptaded to a seperate role, instead of being a predictor. 
+# Recipe
+Within this section, a random forest will be created. First a preprocessing recipe is created. 
+The id variable is updated to a seperate role, instead of being a predictor. 
 ```{r Recipe}
-
-
-rf_recipe <- recipe(logprice ~ ., data = data_train) %>%
+rf_recipe <- recipe(price ~ ., data = data_train) %>%
   update_role(id, new_role = "id var")
 
 rf_recipe
 ```
 
-Within this section the tune specificaiton are mentioned. THe mtry will be tuned later on. Different values for trees where tested (200, 500 & 1000). As is indicated that increase the amount of trees did not have much impact on the result, trees of 200 are chosen to save computational time. 
+# Specify the random forest
+Within this section the tune specificaiton are mentioned. The *mtry* is the number of features that are used at each split. THe exact mtry value will be tuned later on. Different values for trees where tested (200, 500 & 1000). Increasing the amount of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
 ```{r Specify}
 # Tune specification
 tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
-  set_engine("ranger")
+  set_engine("ranger") %>%
+  set_mode("regression")
 ```
 
+# Workflow creation for tuning
 Combine the recipe and the model into a workflow that can be tuned.
 ```{r Workflow}
 # Workflow creation
@@ -64,21 +42,21 @@ tune_wf <- workflow() %>%
   add_model(tune_spec)
 ```
 
-We create a metric set that calculates the Root Mean Square Error (rmse), the Mean Absolute Error (mae) and the R-squared (rsq_trad)
+A metric set that calculates the *Root Mean Square Error (rmse)*, *the Mean Absolute Error (mae)* and the *R-squared (rsq_trad)* is created. 
 ```{r Class metrics}
 # Class metrics specification 
 class_metrics <- metric_set(rmse, mae, rsq_trad)
 ```
 
-The command bellow allows us to do computations in parallel
+The command bellow allows us to do computations in parallel.
 ```{r Parallel}
 registerDoParallel()
 ```
 
-Here I tune the grid. I first did not specify my grid and found that the optimal solutions, based on the MAE criteria, were a mtry of 6, 10, 15, 16 & 21. Therefore, these values were taken as mtry input to save computational time.  
+The tune grid was initially not optmised, but the command grid = tibble(mtry = 1:34) was utlised. This command checked all the variables. Based on the MAE criteria, a mtry of 6, 7, 8, 9 & 10 was found as the optimal solution. After this finding, these optimal mtry values were taken as mtryinput to save computational time.  
 ```{r Tune grid}
 # Define the tune grid 
-tunegrid <- tibble(mtry = c(6, 10, 15, 16, 21))
+tunegrid <- tibble(mtry = c(6, 7, 8, 9, 10))
 ```
 
 ```{r Grid}
@@ -87,12 +65,13 @@ set.seed(12345)
 tune_res <- tune_grid(
   tune_wf,
   resamples = data_folds,
-  grid = 10,
+  grid = tunegrid,
   metrics = class_metrics
 )
 tune_res
 ```
 
+# Selecting tuning parameters 
 ```{r Collect metrics}
 # Collect metrics
 tune_res %>%
@@ -111,18 +90,23 @@ tune_res %>%
   labs(y = "mae")
 ```
 
-This command allows me to see the best predictions based on the MAE criteria. 
+This command allows will show the best mtry based on the MAE criteria. However, initially it showed 6, 9, 14, 15 and 20. THerefore, these values are shown again as the grid is limited to only using those optimal mtry values.  
 ```{r Best MAE}
 # Find the mtry with the best MAE
 tune_res %>% show_best("mae")
 ```
-Now select the best model based on the MAE criteria and finalise the workflow 
+
+# Best model selection
+
+The best model based on the MAE criteria is selected and eventually finalises into the workflow. 
 ```{r Best model}
 # Best model selection
 best_rmse <- select_best(tune_res, "mae")
 final_rf <- finalize_workflow(tune_wf, best_rmse)
 final_rf
 ```
+
+# Test set performance
 
 Now we can train the finalized workflow on our entire training rest
 ```{r }
@@ -138,6 +122,8 @@ set.seed(54321)
 final_res %>%
   collect_metrics()
 ```
+
+# Variable importance 
 
 Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. 
 ```{r }
