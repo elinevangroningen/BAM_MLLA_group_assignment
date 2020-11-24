@@ -338,7 +338,7 @@ variables_analysis <-
 data_semi_final <- data_sub %>% select(all_of(variables_analysis))
 data_semi_final <- data_semi_final %>% 
   select(-c(amenities, amenities_clean, host_verifications,
-            host_verifications_clean))
+            host_verifications_clean, host_since))
 data_final <- data_semi_final[complete.cases(data_semi_final), ]
 ```
 
