@@ -26,7 +26,7 @@ rf_recipe
 
 # Specify the random forest
 Within this section the tune specificaiton are mentioned. The *mtry* is the number of features that are used at each split. THe exact mtry value will be tuned later on. Different values for trees where tested (200, 500 & 1000). Increasing the amount of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
-```{r Specify}
+```{r message=FALSE}
 # Tune specification
 tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
   set_engine("ranger") %>%
@@ -35,7 +35,7 @@ tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
 
 # Workflow creation for tuning
 Combine the recipe and the model into a workflow that can be tuned.
-```{r Workflow}
+```{r message=FALSE}
 # Workflow creation
 tune_wf <- workflow() %>%
   add_recipe(rf_recipe) %>%
@@ -49,12 +49,12 @@ class_metrics <- metric_set(rmse, mae, rsq_trad)
 ```
 
 The command bellow allows us to do computations in parallel.
-```{r Parallel}
+```{r message=FALSE}
 registerDoParallel()
 ```
 
 The tune grid was initially not optmised, but the command grid = tibble(mtry = 1:34) was utlised. This command checked all the variables. Based on the MAE criteria, a mtry of 6, 7, 8, 9 & 10 was found as the optimal solution. After this finding, these optimal mtry values were taken as mtryinput to save computational time.  
-```{r Tune grid}
+```{r message=FALSE}
 # Define the tune grid 
 tunegrid <- tibble(mtry = c(6, 7, 8, 9, 10))
 ```
@@ -109,14 +109,14 @@ final_rf
 # Test set performance
 
 Now we can train the finalized workflow on our entire training rest
-```{r }
+```{r Finalise}
 # Finalise workflow on training set
 final_res <- final_rf %>%
   last_fit(data_split, metrics = class_metrics)
 ```
 
 The results based on the test set will be 
-```{r }
+```{r Test results}
 # Score on test data
 set.seed(54321)
 final_res %>%
@@ -126,7 +126,7 @@ final_res %>%
 # Variable importance 
 
 Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. 
-```{r }
+```{r Refit}
 # Refit the model
 rf_model_vi <- rand_forest(mtry = 6, trees = 200) %>%
   set_engine("ranger", importance = "permutation")
@@ -141,7 +141,9 @@ rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
 ```
 
 We can use the refitted model in order the gather the variable importance 
-```{r }
+```{r Variable importance}
 # Variable importance 
 rf_vi_fit %>% pull_workflow_fit() %>% vi()
 ```
+
+The variable importance indicates that the accommodates, bedrooms and room_type are the most important variables for predicting the logprice. The variables which are the least important for predicting the logprice,are bed_type, pool, and wifi. Pool and wifi actually have a negative importance, bus as this is close to a value of 0, it is chosen to still include those variables.
