@@ -15,9 +15,35 @@ library(tibble)
 library(vip)
 ```
 
+
+```{r }
+data_final$logprice <- log(data_final$price)
+
+data_final$price <- NULL
+
+# Summary(data_final$logprice) #has inf values because of log(0)
+
+data_final$logprice[which(!is.finite(data_final$logprice))] <- 0 #add 0 where the value is inf
+
+# Repeat train split as the data in final data was modified
+# Create a train-split sets 
+
+set.seed(123)
+data_split <- initial_split(data_final, prop = 0.7)
+data_train <- training(data_split)
+data_test <- testing(data_split)
+
+# Generate 10-fold CV sets
+set.seed(321)
+data_folds <- vfold_cv(data_train, v = 10)
+data_folds
+``` 
+
 Setting up a recipe. The id variable is uptaded to a seperate role, instead of being a predictor. 
 ```{r Recipe}
-rf_recipe <- recipe(price ~ ., data = data_train) %>%
+
+
+rf_recipe <- recipe(logprice ~ ., data = data_train) %>%
   update_role(id, new_role = "id var")
 
 rf_recipe
@@ -49,7 +75,7 @@ The command bellow allows us to do computations in parallel
 registerDoParallel()
 ```
 
-Here I tune the grid. I first did not specify my grid and found that the optimal solutions, based on the MAE criteria, were an mtry of 6, 10, 15, 16 & 21. Therefore, these values were taken as mtry input to save computational time.  
+Here I tune the grid. I first did not specify my grid and found that the optimal solutions, based on the MAE criteria, were a mtry of 6, 10, 15, 16 & 21. Therefore, these values were taken as mtry input to save computational time.  
 ```{r Tune grid}
 # Define the tune grid 
 tunegrid <- tibble(mtry = c(6, 10, 15, 16, 21))
@@ -61,7 +87,7 @@ set.seed(12345)
 tune_res <- tune_grid(
   tune_wf,
   resamples = data_folds,
-  grid = tunegrid,
+  grid = 10,
   metrics = class_metrics
 )
 tune_res
