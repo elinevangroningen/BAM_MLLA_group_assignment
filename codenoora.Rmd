@@ -5,7 +5,7 @@ output: html_notebook
 
 ##Creating Log price
 
-```{r}
+```{r message = FALSE}
 data_final$logprice <- log(data_final$price)
 
 #summary(data_final$logprice) #has inf values because of log(0)
@@ -33,7 +33,7 @@ Therefore, mixture is set to 1 in the model specification.
 
 ## Model specification
 Specification of lasso-regularized logistic regression model, where the penalty parameter will be tuned:
-```{r}
+```{r message = FALSE}
 lasso_linreg <- linear_reg(penalty = tune(), mixture = 1) %>% 
   set_engine("glmnet")
 
@@ -48,14 +48,9 @@ In this section, the recipe is formulated. All the variables included in the fin
 did not include: availability_90 and availability_365, and the specific variables for calculated_host_listings_count_
 
 ```{r}
-lasso_recipe <-  recipe(logprice ~ property_type + room_type + accommodates + bathrooms + bedrooms + beds +
-                          bed_type  + host_response_time + host_listings_count + host_identity_verified +
-                          neighbourhood_cleansed + guests_included + extra_people + minimum_nights + 
-                          maximum_nights + availability_30 + instant_bookable + cancellation_policy +
-                          require_guest_profile_picture + require_guest_phone_verification + 
-                          calculated_host_listings_count + wifi + pool + hot_tub + host_email + host_phone +
-                          host_facebook + host_government_id + host_years_active, 
+lasso_recipe <-  recipe(logprice ~ ., 
                           data = data_train) %>% 
+                        update_role(id, host_since, new_role = "ID") %>%
                         step_other(property_type, bed_type,  threshold = 0.01, other = "other values") %>% 
                         step_dummy(all_nominal(), -all_outcomes()) %>%
                         step_normalize(all_predictors(), -all_outcomes())
@@ -70,10 +65,8 @@ head(data_baked)
 ```
 
 
-
-
 ## Create Lasso Workflow
-```{r}
+```{r message = FALSE}
 lasso_wf <- workflow() %>% 
   add_recipe(lasso_recipe) %>% 
   add_model(lasso_linreg)
@@ -127,8 +120,7 @@ lasso_tune_metrics %>% filter(.metric == "mae") %>%
 ```
 
 
-Next, the best model with the best value of Lambda is selected. It can be seen that as the RMSE is more sensitive for large residuals, the std errors of this metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, mean absolute error is used to select the best model. 
-
+Next, the Lambda value which results in best model performance on the train set is selected. It can be seen that as the RMSE is more sensitive for large residuals, the std errors of this metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, mean absolute error is used to select the best model. 
 ```{r}
 lasso_tune %>% show_best("mae")
 ```
@@ -138,8 +130,7 @@ The best model is selected using the one standard error rule, where the simplest
 lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "mae", desc(penalty))
 lasso_1se_model
 ```
-As can be seen, the best model has penalty parameter of 0.007.
-
+As can be seen, the best model has penalty parameter of 0.00496.
 
 Finalize the workflow:
 ```{r}
@@ -148,7 +139,6 @@ lasso_wf_tuned <-
   finalize_workflow(lasso_1se_model)
 lasso_wf_tuned
 ```
-
 
 ```{r}
 lasso_last_fit <- lasso_wf_tuned %>% 
@@ -161,11 +151,9 @@ lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
 lasso_test_metrics
 ```
 
-
-To assess the importance of the predictor variables, model parameter estimates are calulated below:
+To assess the importance of the predictor variables, model parameter estimates are calculated below:
 ```{r}
 lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
-
 ```
 
 As lasso performs subset selection automatically, some variables have coefficient of zero. 

@@ -378,8 +378,8 @@ ggplot(data = data_train , aes(log(price))) +
 
 ```{r}
 # Log transform price in both training and test set
-data_train$price <- log(data_train$price)
-data_test$price <- log(data_test$price)
+data_train$price <- log(data_train$price + 1)
+data_test$price <- log(data_test$price + 1)
 ```
 
 # K-fold cross validation 
