@@ -14,6 +14,9 @@ library(readr)
 library(glmnet)
 library(leaps)
 library(naniar)
+library(skimr)
+library(knitr)
+library(corrplot)
 ```
 
 # Load data listings
@@ -23,45 +26,20 @@ data <- read_csv(gzfile("listings.csv.gz"))
 ```
 
 # Select variables of interest
-
-The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Then hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews give information about a listing after it has been published. Therefore, this variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
+The goal of the assignment is to build a model that predicts the prices of listings on AirBnB in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Then hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews give information about a listing after it has been published. Therefore, this variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
 
 ```{r message = FALSE}
 # Generate subset with variables of interest
 data_sub <- data %>%
-  select(id, 
-         price, 
-         property_type, 
-         room_type, 
-         accommodates, 
-         bathrooms,
-         bedrooms,
-         beds,
-         bed_type, 
-         amenities,
-         host_since, 
-         host_response_time, 
-         host_response_rate, 
-         host_neighbourhood, 
-         host_listings_count, 
-         host_verifications, 
-         host_identity_verified, 
-         neighbourhood_cleansed,
-         square_feet, 
-         cleaning_fee, 
-         guests_included,
-         extra_people, 
-         minimum_nights,
-         maximum_nights, 
-         availability_30,
-         availability_60,
-         availability_90,
-         availability_365,
-         instant_bookable, 
-         cancellation_policy,
-         require_guest_profile_picture,
-         require_guest_phone_verification, 
-         calculated_host_listings_count,
+  select(id, price, property_type, room_type, accommodates, bathrooms, bedrooms,
+         beds, bed_type, amenities, host_since, host_response_time,
+         host_response_rate, host_neighbourhood, host_listings_count, 
+         host_verifications, host_identity_verified, neighbourhood_cleansed,
+         square_feet, cleaning_fee, guests_included, extra_people, 
+         minimum_nights, maximum_nights, availability_30, availability_60,
+         availability_90, availability_365, instant_bookable, 
+         cancellation_policy, require_guest_profile_picture,
+         require_guest_phone_verification, calculated_host_listings_count,
          calculated_host_listings_count_entire_homes, 
          calculated_host_listings_count_private_rooms,
          calculated_host_listings_count_shared_rooms)
@@ -74,12 +52,14 @@ head(data_sub)
 
 ```{r}
 # Inspect data
-str(data_sub)
+skim(data_sub) %>% knit_print()
 ```
 
 # Data cleaning
 
 ## Basic cleaning
+
+First, we converted all categorical en logical variables, that did not need any further cleaning, to type factors.
 ```{r Converting vectors}
 # Convert columns to factors 
 data_sub$property_type <- factor(data_sub$property_type , 
@@ -106,6 +86,7 @@ data_sub$require_guest_phone_verification <-
   factor(data_sub$require_guest_phone_verification)
 ```
 
+Second, some of the variables contain numeric variables, however, they are stored in a string containing a dollar or percentage sign. The signs we removed from the strings and the remaining number converted to numeric variables.
 ```{r Convert }
 # Remove $ sign from columns containing prices and convert to doubles
 data_sub$price <- as.double(gsub("[,$]", "", data_sub$price))
@@ -119,6 +100,8 @@ data_sub$host_response_rate <-
 ```
 
 ## Clean amenities 
+
+The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string and the elements could not be access separately. Therefore, we cleaned the string, spitted it so we had a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
 ```{r Generate all unique amenities}
 # Clean and split strings for amenities
 # Returns a list with all unique values
@@ -148,6 +131,8 @@ amenities_unique
 ```
 
 ### Create new variables based information stored in amenities
+
+With the vector of all unique amenities we could create variables for all the separated variables. However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some are amenities are very specific and apply only to a few or one house. However, we created variables some of the amenities we think could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
 ```{r Create new variables for amenities}
 # Create variable for WIFI and add to data set
 wifi <- vector()
@@ -165,7 +150,8 @@ data_sub$wifi <- factor(data_sub$wifi, levels = c("yes", "no"))
 # Create variable for pool and add to data set
 pool <- vector()
 for(i in 1:length(data_sub$amenities_clean)) {
-  if("pool" %in% data_sub$amenities_clean[[i]]) {
+  if("pool" %in% data_sub$amenities_clean[[i]] |
+     "pool with pool hoist" %in% data_sub$amenities_clean[[i]]) {
     pool[i] <-  "yes"
   } else {
     pool[i] <-  "no"
@@ -185,9 +171,24 @@ for(i in 1:length(data_sub$amenities_clean)) {
 }
 data_sub$hot_tub <- hot_tub
 data_sub$hot_tub <- factor(data_sub$hot_tub, levels = c("yes", "no"))
+
+# Create variable for hot_tub and add to data set
+tv <- vector()
+for(i in 1:length(data_sub$amenities_clean)) {
+  if("tv" %in% data_sub$amenities_clean[[i]] |
+     "cable tv" %in% data_sub$amenities_clean[[i]]) {
+    tv[i] <-  "yes"
+  } else {
+    tv[i] <-  "no"
+  }
+}
+data_sub$tv <- tv
+data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 ```
 
 ## Clean host verification methods
+
+For the variable *host_verification* the same applies as to *amenities*. We have applied the same cleaning method, first we cleaned and splitted the strings, whereafther we generated a vector with all unique amenities. 
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -218,6 +219,8 @@ verifications_unique
 ```
 
 ### Create variables based on information stored in host verifications
+
+We created sepearte variables for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
 ```{r Create new variables for host verification method}
 # Create variable for host email and add to data set
 host_email <- vector()
@@ -270,7 +273,9 @@ data_sub$host_government_id <-
   factor(data_sub$host_government_id, levels = c("yes", "no"))
 ```
 
-## Clean date variables 
+## Clean date variables
+
+We used the variable *host_since* to create a new variable *host_years_active*, which contains information on the number of years a host has been active on the platform. 
 ```{r Create new variable}
 # Create new variable for active years host 
 data_sub <- data_sub %>% 
@@ -278,29 +283,24 @@ data_sub <- data_sub %>%
            as.double(as.Date("2019-12-07") - host_since) / 365)
 ```
 
-# Inspect explantory variable
-```{r}
-# Plot distribution price
-ggplot(data = data_sub , aes(price)) +
-  geom_histogram(col="black",
-                 breaks=seq(0, 9000, by=75),
-                 aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
-  
-# Plot distribution price with cutoff at 1500
-ggplot(data = data_sub , aes(price)) +
-  geom_histogram(col="black",
-                 breaks=seq(0, 1500, by=10),
-                 aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
+## Inspect availability variables
 
-data_sub %>% summarize(mean(price))
-data_sub %>% filter(price <= 1500) %>% summarize(mean(price))
+The variables *availability_30*, *availability_60*, *availability_90* and *availability_365* carry some of the same information. In order to inspect if we should include all variables in the data set, we plotted a correlation matrix. The plot below shows that all variables indicating the availability are strongly correlated. Therefore, we only include the variable *availability_30* for further analysis. 
+```{r}
+# Plot correlation matrix
+data_sub %>% select_if(is.numeric) %>% 
+  select(availability_30, availability_60, availability_90, availability_365) %>% 
+  cor() %>% corrplot()
+
+# Remove other availability variables from data set
+data_sub <- 
+  data_sub %>% 
+  select(-availability_60, -availability_90, -availability_365)
 ```
 
 ## Check missing data
+
+We have create a table to inspect with variables have missing cases and how many. The table shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
 ```{r Missing data check}
 # Count missing cases per variable
 na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
@@ -315,23 +315,22 @@ na_values %>%
   arrange(desc(na_count))
 ```
 
-The table above shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
-
+Moreover, we have check how many cases contain missing values if the other values that have missing cases would be included in the 'final' data set. The table below shows that there are 206 cases which contain missing values, which is about $1.03\%$ of the entire data set. Since this is a very small proportion it is not very likely that deleting these causes would have a large impact on the predictions. Therefore, we delete the cases with missing values. 
 ```{r Incomplete cases}
 # Compute incomplete rows
-incomplete_rows <-  
-  which(is.na(data_sub %>% select(host_response_time, host_listings_count, 
-                                  host_identity_verified, beds, bedrooms, 
-                                  host_years_active, bathrooms)))
-unique <- length(unique(incomplete_rows))
-unique
+data_sub %>% 
+  select(host_since, host_response_time, host_listings_count,
+         host_identity_verified, beds, bedrooms, host_years_active, 
+         bathrooms) %>% 
+  complete.cases() %>% 
+  summary(count())
 ```
 
 ```{r Generate final data set}
 # Select variables for data set
 variables_analysis <-   
   na_values %>% 
-  filter(na_count <= 649) %>% 
+  filter(na_count <= 158) %>% 
   select(variables) %>% 
   pull(variables)
 
@@ -344,18 +343,58 @@ data_final <- data_semi_final[complete.cases(data_semi_final), ]
 ```
 
 # Create train-test split
+
+For further analyis the data is split into a train-test set.
 ```{r}
 # Create a train-split sets
 set.seed(123)
 data_split <- initial_split(data_final, prop = 0.7)
 data_train <- training(data_split)
 data_test <- testing(data_split)
+```
 
+# Inspecting the predicted variable
+
+In order to prevent data leakages we only inspect the predicted variable *price* in the training set. In order to inspect *price* we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skeweness make the data less interpretable and this could have an influence on performance of the models. 
+```{r}
+# Plot distribution price
+ggplot(data = data_train , aes(price)) +
+  geom_histogram(col="black",
+                 breaks=seq(0, max(data_train$price), by=75),
+                 aes(fill=..count..)) +
+  labs(title="Histogram for Price", x="Price", y="Count") +
+  scale_fill_gradient("Count", low="green", high="red")
+```
+
+In order to prevent this potential problems we have created a new distribution plot with a log transformed variable *price*. The plot shows that the distribution is less skewed and does not contain any large outliers. Resulting, the data that is more interpretable. Therefore, log transforming we will use the log transformed *price* for our models. 
+```{r}
+# Plot distribution price
+ggplot(data = data_train , aes(log(price))) +
+  geom_histogram(col="black",
+                 aes(fill=..count..)) +
+  labs(title="Histogram for Ln Price", x="Ln Price", y="Count") +
+  scale_fill_gradient("Count", low="green", high="red")
+```
+
+```{r}
+# Log transform price in both training and test set
+data_train$price <- log(data_train$price)
+data_test$price <- log(data_test$price)
+```
+
+# K-fold cross validation 
+
+Moreover, we have generated 10-fold cross validation sets.
+```{r}
 # Generate 10-fold CV sets
 set.seed(321)
 data_folds <- vfold_cv(data_train, v = 10)
 data_folds
 ```
+
+
+
+
 
 
 
