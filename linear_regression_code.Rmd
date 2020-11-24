@@ -78,14 +78,14 @@ ols_test_metrics
 ##Preprocessing recipes
 In this recipe it has to be ensured that all factors are converted to a numeric representation, and that the columns are normalized. The latter meaning that the mean will be zero and the standard deviation one.
 ```{r}
-linreg_recipe <- recipe(price ~ ., data = data_train) %>% 
-  step_dummy(all_nominal()) %>% 
-  step_normalize(-price)
-
 ##linreg_recipe <- recipe(price ~ ., data = data_train) %>% 
-  ##step_rm(id, property_type, room_type, bed_type, host_since, host_response_time, host_identity_verified, neighbourhood_cleansed, instant_bookable, cancellation_policy, require_guest_profile_picture, require_guest_phone_verification, wifi, pool, hot_tub, host_email, host_phone, host_facebook, host_government_id, host_verification_method) %>%
   ##step_dummy(all_nominal()) %>% 
   ##step_normalize(-price)
+
+linreg_recipe <- recipe(price ~ ., data = data_train) %>% 
+  step_rm(id, property_type, room_type, bed_type, host_since, host_response_time, host_identity_verified, neighbourhood_cleansed, instant_bookable, cancellation_policy, require_guest_profile_picture, require_guest_phone_verification, wifi, pool, hot_tub, host_email, host_phone, host_facebook, host_government_id, host_verification_method) %>%
+  step_dummy(all_nominal()) %>% 
+  step_normalize(-price)
 ```
 
 ```{r}
@@ -151,7 +151,7 @@ grid_ridge <- tibble(penalty = 10^(seq(from = 1, to = 6, length.out = 50)))
 
 ```{r}
 lasso_tune <- lasso_wf %>% 
-  tune_grid(resamples = train_folds, 
+  tune_grid(resamples = data_folds, 
             grid = grid_lasso,
             metrics = metric_set(rmse, rsq_trad, mae))
 ```
@@ -194,7 +194,7 @@ lasso_wf_tuned
 
 ```{r}
 ridge_tune <- ridge_wf %>% 
-  tune_grid(resamples = train_folds, 
+  tune_grid(resamples = data_folds, 
             grid = grid_ridge,
             metrics = metric_set(rmse, rsq_trad, mae))
 ```
