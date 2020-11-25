@@ -1,0 +1,156 @@
+---
+title: "K-Nearest Neighbors Algorithm"
+output: html_notebook
+---
+
+## Set up turning grid
+```{r}
+# Generate tuning grid for knn
+knn_tune_grid <- tibble(neighbors = 1:50*2-1)
+knn_tune_grid
+```
+
+## Specify a workflow 
+
+Something that should be noted for this recipe, is that only numeric variables are included. This is done for the reason that categorical variables translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model.)
+```{r}
+# Specify model 
+knn_mod <- 
+  nearest_neighbor(neighbors = tune()) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn", scale=FALSE)
+knn_mod
+
+# Specify recipe
+knn_recipe <- 
+  recipe(price ~ ., data = data_train) %>% 
+  step_rm(all_nominal()) %>%
+  update_role(id, new_role = "id var") %>% 
+  step_normalize(all_predictors(), -id)
+knn_recipe
+```
+
+```{r}
+# Check normalization 
+train_baked <- knn_recipe %>% prep(data_train) %>% bake(data_train)
+train_baked %>% head()
+round(colMeans(train_baked, 8))
+round(apply(train_baked, 2, sd), 8)
+rm(train_baked)
+```
+
+```{r}
+# Specify workflow
+knn_workflow <- 
+  workflow() %>% 
+  add_model(knn_mod) %>% 
+  add_recipe(knn_recipe)
+knn_workflow
+```
+
+## Tuning the number of nearest neighbours
+```{r}
+# Store metrics in variable
+metrics_reg <- metric_set(rmse, mae, rsq_trad)
+
+# Perform grid search using validation sets
+knn_tune_res <- 
+  knn_workflow %>% 
+  tune_grid(resamples = data_folds,
+            grid = knn_tune_grid, 
+            metrics = metrics_reg) 
+
+# Plot results metrics
+knn_metrics_plot <- 
+  knn_tune_res %>%  collect_metrics() %>% 
+  ggplot(aes(x = neighbors, y = mean)) +
+  geom_point() + geom_line() +
+  facet_wrap(~ .metric, scale = "free_y") +
+  labs(title = "KNN Performance Metrics") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+knn_metrics_plot
+
+# Save peformance plot
+ggsave("plots/knn_neighbor_metrics.png", plot = knn_metrics_plot)
+
+autoplot(knn_tune_res)
+```
+
+```{r}
+# Generate best model
+knn_best_model <- select_best(knn_tune_res, metric = "mae")
+knn_best_model
+```
+
+## Finalize workflow
+```{r}
+# Finalize workflow
+knn_workflow_final <- 
+  knn_workflow %>% 
+  finalize_workflow(knn_best_model)
+knn_workflow_final
+```
+
+## Last fit 
+```{r}
+# Train and test the data set
+knn_last_fit <- 
+  knn_workflow_final %>% 
+  last_fit(data_split, 
+           metrics = metrics_reg)
+
+# Collect KNN performance metrics
+knn_metrics <- 
+  knn_last_fit %>% 
+  collect_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "knn reg")
+knn_metrics
+```
+
+# KNN variable importance 
+KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
+
+# Metrics
+```{r}
+# Generate predicted values for sales
+knn_test_preds <- 
+  knn_workflow_final %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
+
+# Create tibble for distribution plot
+knn_pred <- 
+  tibble(observed = data_test$price, 
+         predicted = knn_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+knn_residual_plot <- 
+  knn_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "KNN Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
+
+# Save plot for presentation
+ggsave("plots/knn_residual.png", plot = knn_residual_plot)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

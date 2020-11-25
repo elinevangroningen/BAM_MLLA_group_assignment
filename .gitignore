@@ -42,5 +42,4 @@ vignettes/*.pdf
 code.nb.html
 
 # KNN check
-knn.Rmd
 knn.nb.html
