@@ -3,10 +3,10 @@ title: "MLLA - Group Assignment"
 output: html_notebook
 date: "11/25/2020"
 author: 
-  - Goswin Nibbering
-  - Kylian van Noordenne
-  - Noora Mattsson
-  - Eline van Groningen
+  - Goswin Nibbering (563285) 
+  - Kylian van Noordenne (450752) 
+  - Noora Mattsson (477100) 
+  - Eline van Groningen (414846) 
 ---
 
 # Setup notebook
@@ -35,7 +35,7 @@ data <- read_csv(gzfile("listings.csv.gz"))
 ```
 
 # Select variables of interest
-The goal of the assignment is to build a model that predicts the prices of listings on AirBnB in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Then hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews give information about a listing after it has been published. Therefore, this variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
+The goal of the assignment is to build a model that predicts the prices of listings on AirBnB in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Afterwards, hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews provide information about a listing after it has been published. Therefore, these variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
 
 ```{r message = FALSE}
 # Generate subset with variables of interest
@@ -68,7 +68,7 @@ skim(data_sub) %>% knit_print()
 
 ## Basic cleaning
 
-First, we converted all categorical en logical variables, that did not need any further cleaning, to type factors.
+First, we converted all categorical en logical variables, which did not need any further cleaning, to type factors.
 ```{r Converting vectors}
 # Convert categorical vars to factors 
 data_sub$property_type <- factor(data_sub$property_type , 
@@ -139,7 +139,7 @@ amenities_unique
 
 ### Create new variables based information stored in amenities
 
-With the vector of all unique amenities, separate variables for all the separated variables could be created. However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some amenities are very specific and apply only to a few or one house. However, variables are created for some of the amenities that could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
+Separate variables could be created from the vector containing all unique amenities.  However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some amenities are very specific and apply only to a few or one house. Yet, variables are created for some of the amenities that could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
 ```{r Create new variables for amenities}
 # Create variable for WIFI and add to data set
 wifi <- vector()
@@ -195,7 +195,7 @@ data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 
 ## Clean host verification methods
 
-For the variable *host_verification* the same applies as to *amenities*. The same cleaning method was used as for amenities, first we cleaned and splitted the strings, thereafter a vector with all unique amenities is generated.
+The same reasoning from the *amenities* section above applies to the variable *host_verification*. The same cleaning method was used as for amenities, first we cleaned and splitted the strings, thereafter a vector with all unique amenities is generated.
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -280,7 +280,7 @@ data_sub$host_government_id <-
 
 ## Clean date variables
 
-We used the variable *host_since* to create a new variable *host_years_active*, which contains information on the number of years a host has been active on the platform. 
+We used the variable *host_since* to create a new variable *host_years_active*, which contains information regarding the number of years a host has been active on the platform. 
 ```{r Create new variable}
 # Create new variable for active years host 
 data_sub <- data_sub %>% 
@@ -305,7 +305,7 @@ data_sub <-
 
 ## Check missing data
 
-In order to inspect which variables have missing cases, and how many there were in general, a table in constructed. The table shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is not included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
+In order to inspect which variables have missing cases, and how many there are in general, a table is constructed. The table shows the variables in the data set which contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values, like replacing NA-values with the mean or median, would not be appropriate as the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is not included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. Due to these findings, these variables are also excluded from the analyses. 
 ```{r Missing data check}
 # Count missing cases per variable
 na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
@@ -373,7 +373,7 @@ ggplot(data = data_train , aes(price)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-In order to prevent these potential problems we have created a new distribution plot with a log transformed variable *price*. The plot shows that the distribution is less skewed and does not contain any large outliers. Consequently, the data that is more interpretable. Therefore, we will use the log transformed *price* for our models. 
+In order to prevent these potential problems we created a new distribution plot with a log transformed variable *price*. The plot illustrates that the distribution is less skewed and does not contain any large outliers. Consequently, the data is more interpretable. Therefore, we will use the log transformed *price* for our models. 
 ```{r}
 # Plot distribution price
 ggplot(data = data_train , aes(log(price + 1))) +
@@ -433,7 +433,7 @@ lasso_linreg %>% translate()
 
 ## Preprocessing recipe
 
-In this section, the recipe is formulated. All the variables included in the final dataset are included in the recipe, in order to perform the subset selection through the lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
+In this section, the recipe is formulated. All the final dataset variables are included in the recipe, in order to perform the subset selection by means of a lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
 ```{r results='hide'}
 #prepare the recipe by setting up the regression model, setting id as id variable, combining small categories to other class, and creating dummies and normalizing variables
 lasso_recipe <-  recipe(price ~ ., 
@@ -504,13 +504,13 @@ lasso_tune_metrics %>% filter(.metric == "mae") %>%
        title = "Lasso Regresssion MAE")
 ```
 
-Next, the Lambda value which results in best model performance on the train set is selected. It can be seen that as the RMSE is more sensitive for large residuals, the standard errors of these metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, the mean absolute error is used to select the best model. 
+Next, the Lambda value which results in best model performance on the train set is selected. It can be seen that as the RMSE is more sensitive for large residuals, the standard errors of these metrics are larger compared to the standard errors of mean absolute error (MAE). Therefore, the mean absolute error is used to select the best model. 
 ```{r}
  #show best models with corresponding penalty values
 lasso_tune %>% show_best("mae")
 ```
 
-The best model is selected using the one standard error rule, where the simplest model that has mae inside one standard error from the absolute best model is chosen to avoid overfitting.
+The best model is selected using the one standard error rule, where the simplest model that has MAE inside one standard error from the absolute best model is chosen to avoid overfitting.
 ```{r}
  #select best model according to 1 std error rule
 lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "mae", desc(penalty))
@@ -574,7 +574,7 @@ rf_tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
   set_mode("regression")
 ```
 
-Combine the recipe and the model into a workflow that can be tuned.
+The recipe and the model are combined into a workflow that can be tuned.
 ```{r message=FALSE}
 # Workflow creation
 rf_tune_wf <- workflow() %>%
@@ -582,7 +582,7 @@ rf_tune_wf <- workflow() %>%
   add_model(rf_tune_spec)
 ```
 
-A metric set that calculates the *Root Mean Square Error (rmse)*, *the Mean Absolute Error (mae)* and the *R-squared (rsq_trad)* is created. 
+A metric set is specified, which calculates the *Root Mean Square Error (RMSE)*, *the Mean Absolute Error (MAE)* and the *R-squared (rsq_trad)* is created. 
 ```{r Class metrics}
 # Class metrics specification 
 class_metrics <- metric_set(rmse, mae, rsq_trad)
@@ -593,7 +593,7 @@ The command bellow allows us to do computations in parallel.
 registerDoParallel()
 ```
 
-The tune grid was initially not optimized, but the command grid = tibble(mtry = 1:33) was utilized. This command checked all the variables. Based on the mae criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is taken that will include the optimal values, as well mtry values of 1 up until 4. This allows us to see that the mtry is initially increased up until it reaches its optimal mtry solution.  
+The command grid = tibble(mtry = 1:33) was utlised, as this allows the random forest to consider all number of variables at each split. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is taken that will include the optimal values, as well mtry values of 1 up until 4 and a mtry of 10. This allows us to see that the mtry is initially increased up until it reaches its optimal mtry solution.  
 ```{r message=FALSE}
 # Define the tune grid 
 rf_tunegrid <- tibble(mtry = c(1:10))
@@ -618,7 +618,7 @@ rf_tune_res %>%
   collect_metrics()
 ```
 
-A plot for finding the best mtry, based on the criteria of the mae. A lower mae would indicate a better result, as a lower value indicates a lower error of prediction. 
+This plot illustrates the best mtry, based on the criteria of the MAE. A lower MAE would indicate a better result, as a lower value indicates a lower error of prediction. 
 ```{r Plot MAE}
 # Plot results all metrics
 rf_tune_res %>%
@@ -643,9 +643,9 @@ rf_tune_res %>%
   labs(y = "mae", title = "Random Forest performance metrics")
 ```
 
-This command will show the best mtry based on the mae criteria. 
+This command will show the best mtry based on the MAE criteria. 
 ```{r Best MAE}
-# Find the mtry with the best mae
+# Find the mtry with the best MAE
 rf_tune_res %>% show_best("mae")
 ```
 
@@ -792,9 +792,9 @@ knn_metrics_plot
 autoplot(knn_tune_res)
 ```
 
-The plot output shows some metrics that plot the mean of the performance metrics. We should aim for the mae (mean absolute error) and rmse (root mean square error) to be as low as possible, and the rsq_trad (R-squared) to be as high as possible. We used the mae metric to determine the optimal k-neighbors for our model, which arrived at 51 neighbors. This can be read from the mae graph, by looking at the corresponsing k-neighbors for the lowest mean of mae. 
+The plot output shows some metrics that plot the mean of the performance metrics. We should aim for the MAE (mean absolute error) and RMSE (root mean square error) to be as low as possible, and the rsq_trad (R-squared) to be as high as possible. We used the MAE metric to determine the optimal k-neighbors for our model, which arrived at 51 neighbors. This can be read from the MAE graph, by looking at the corresponsing k-neighbors for the lowest mean of MAE. 
 
-Moreover, from the last plot the elbow trend can somewhat clearly be seen: the metrics reach their optimum point after which the level off and slowly increase for mae and rmse and decrease for rqs_trad.
+Moreover, from the last plot the elbow trend can somewhat clearly be seen: the metrics reach their optimum point after which the level off and slowly increase for MAE and RMSE and decrease for rqs_trad.
 
 The model with the optimal number of k-nearest neighbors can then be selected as follows:
 ```{r}
@@ -804,7 +804,7 @@ knn_best_model <- select_best(knn_tune_res, metric = "mae")
 
 ## Finalize workflow
 
-Below the finalized workflow is made, which automatically picks the best KNN-model defined above (which is specified by the mae metric)
+Below the finalized workflow is made, which automatically picks the best KNN-model defined above (which is specified by the MAE metric)
 ```{r}
 # Finalize workflow
 knn_workflow_final <- 
@@ -897,7 +897,7 @@ knn_test_preds <-
   pull(.pred)
 
 # Create tibble for distribution plot
-knn_metrics <- 
+knn_pred <- 
   tibble(observed = data_test$price, 
          predicted = knn_test_preds, 
          residual = observed - predicted)
