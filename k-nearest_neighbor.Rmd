@@ -55,8 +55,6 @@ knn_regr_recipe <-
   recipe(price ~ ., data = data_train) %>% 
   step_rm(id, property_type, room_type, bed_type, host_since, host_response_time, host_identity_verified, neighbourhood_cleansed, instant_bookable, cancellation_policy, require_guest_profile_picture, require_guest_phone_verification, wifi, pool, hot_tub, tv, host_email, host_phone, host_facebook, host_government_id) %>%
   step_normalize(all_predictors())
-
-#step_rm(id, property_type, room_type, accommodates, bathrooms, bedrooms, beds, bed_type, host_since, host_response_time, host_listings_count, host_identity_verified, neighbourhood_cleansed, guests_included, extra_people, minimum_nights, availability_30, instant_bookable, cancellation_policy, require_guest_profile_picture, require_guest_phone_verification, calculated_host_listings_count, calculated_host_listings_count_entire_homes, calculated_host_listings_count_private_rooms, calculated_host_listings_count_shared_rooms, wifi, pool, hot_tub, host_email, host_phone, host_facebook, host_government_id) %>%
 ```
 
 Overview of the recipe

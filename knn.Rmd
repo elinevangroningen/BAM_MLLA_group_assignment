@@ -30,6 +30,7 @@ knn_recipe <-
 knn_recipe
 ```
 
+The normalization of the data is ensured through the following commands:
 ```{r}
 # Check normalization 
 train_baked <- knn_recipe %>% prep(data_train) %>% bake(data_train)
@@ -39,6 +40,7 @@ round(apply(train_baked, 2, sd), 8)
 rm(train_baked)
 ```
 
+Below is the initial workflow for the k-nearest neighbors model is specified
 ```{r}
 # Specify workflow
 knn_workflow <- 
@@ -49,6 +51,8 @@ knn_workflow
 ```
 
 ## Tuning the number of nearest neighbours
+
+The code below serves to specificy the assessment metrics that are used. Moreover, a grid search is performed using the validation sets. 
 ```{r}
 # Store metrics in variable
 metrics_reg <- metric_set(rmse, mae, rsq_trad)
@@ -75,13 +79,19 @@ ggsave("plots/knn_neighbor_metrics.png", plot = knn_metrics_plot)
 
 autoplot(knn_tune_res)
 ```
+The plot output shows some metrics that plot the mean of the performance metrics. We should aim for the mae (mean absolute error) and rmse (root mean square error) to be as low as possible, and the rsq_trad (R-squared) to be as high as possible. We used the mae metric to determine the optimal k-neighbors for our model, which arrived at 51 neighbors. This can be read from the mae graph, by looking at the corresponsing k-neighbors for the lowest mean of mae. 
 
+Moreover, from the last plot the elbow trend can somewhat clearly be seen: the metrics reach their optimum point after which the level off and slowly increase for mae and rmse and decrease for rqs_trad.
+
+The model with the optimal number of k-nearest neighbors can then be selected as follows:
 ```{r}
 # Generate best model
 knn_best_model <- select_best(knn_tune_res, metric = "mae")
 ```
 
 ## Finalize workflow
+
+Below the finalized workflow is made, which automatically picks the best KNN-model defined above (which is specified by the mae metric)
 ```{r}
 # Finalize workflow
 knn_workflow_final <- 
@@ -91,6 +101,8 @@ knn_workflow_final
 ```
 
 ## Last fit 
+
+A final workflow can be set up to check the final fit. Furthermore, the performance metrics for the best KNN-model are selected and put in a table.
 ```{r}
 # Train and test the data set
 knn_last_fit <- 
@@ -111,8 +123,10 @@ knn_metrics
 KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
 
 # Metrics
+
+Below the final workflow with the optimal k-neighbors is selected and ran against the test set.
 ```{r}
-# Generate predicted values for sales
+# Generate predicted values for price
 knn_test_preds <- 
   knn_workflow_final %>% 
   fit(data = data_train) %>%
@@ -139,7 +153,7 @@ knn_residual_plot
 # Save plot for presentation
 ggsave("plots/knn_residual.png", plot = knn_residual_plot)
 ```
-
+Finally, a distribution plot is then set up to check how well the KNN-model fit for the actual observed prices. As you can see the predictions are fairly normally distributed, meaning there is no skewedness to either one side. This means that there are no extra implications that should be kept in mind when interpreting the mean absolute error (mae).
 
 
 
