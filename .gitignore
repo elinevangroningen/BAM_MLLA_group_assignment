@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # HTML files 
-.nb.html
+code.nb.html
 
 # KNN check
 knn.Rmd

@@ -53,10 +53,10 @@ The command bellow allows us to do computations in parallel.
 registerDoParallel()
 ```
 
-The tune grid was initially not optmised, but the command grid = tibble(mtry = 1:33) was utlised. This command checked all the variables. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. After this finding, these optimal mtry values were taken as mtryinput to save computational time.  
+The tune grid was initially not optimized, but the command grid = tibble(mtry = 1:33) was utilized. This command checked all the variables. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. After this finding, these optimal mtry values were taken as mtry input to save computational time.  
 ```{r message=FALSE}
 # Define the tune grid 
-tunegrid <- tibble(mtry = c(5, 6, 7, 8, 9))
+tunegrid <- tibble(mtry = c(1:10))
 ```
 
 ```{r Grid}
@@ -79,6 +79,17 @@ tune_res %>%
 ```
 A plot for finding the best mtry, based on the criteria of the mae. A lower mae would indicate a better results, as a lower value indicates a lower error of prediction. 
 ```{r Plot MAE}
+# Plot results all metrics
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("rmse", "mae", "rsq_trad")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y") 
+
 # Plot the MAE based
 tune_res %>%
   collect_metrics() %>%
@@ -147,3 +158,45 @@ rf_vi_fit %>% pull_workflow_fit() %>% vi()
 ```
 
 The variable importance indicates that the accommodates, bedrooms and room_type are the most important variables for predicting the logprice. The variables which are the least important for predicting the logprice,are bed_type, pool, and wifi. Pool and wifi actually have a negative importance, bus as this is close to a value of 0, it is chosen to still include those variables.
+
+```{r}
+# Plot variable importance
+var_importance_plot <-
+  rf_vi_fit %>%
+  pull_workflow_fit() %>% vip(geom = "point", num_features = 12) +
+  labs(title = "Random Forest Variable Importance") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+rf_vi_fit
+
+# Save plot for presentation
+ggsave("rf_var_importance.png", plot = variable_importance_plot)
+```
+```{r}
+# Generate predicted values for sales
+set.seed(12345)
+rf_test_preds <- 
+  rf_vi_wf %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
+
+# Create tibble for distribution plot
+rf_pred <- 
+  tibble(observed = data_test$price, 
+         predicted = rf_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+rf_residual_plot <- 
+  rf_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "Random Forest Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+rf_residual_plot
+
+# Save plot for presentation
+ggsave("rf_residual.png", plot = rf_residual_plot)
+```
+

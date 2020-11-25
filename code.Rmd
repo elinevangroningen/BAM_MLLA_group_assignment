@@ -188,7 +188,7 @@ data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 
 ## Clean host verification methods
 
-For the variable *host_verification* the same applies as to *amenities*. We have applied the same cleaning method, first we cleaned and splitted the strings, whereafther we generated a vector with all unique amenities. 
+For the variable *host_verification* the same applies as to *amenities*. We have applied the same cleaning method, first we cleaned and splitted the strings, whereafther we generated a vector with all unique amenities.
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -344,7 +344,7 @@ data_final <- data_semi_final[complete.cases(data_semi_final), ]
 
 # Create train-test split
 
-For further analyis the data is split into a train-test set.
+For further analysis the data is split into a train-test set.
 ```{r}
 # Create a train-split sets
 seed_x <-  123
@@ -406,11 +406,5 @@ rm(data_sub)
 rm(data_semi_final)
 rm(na_values)
 ```
-
-
-
-
-
-
 
 

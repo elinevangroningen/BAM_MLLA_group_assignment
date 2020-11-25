@@ -125,8 +125,35 @@ lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy()
 ```
 As lasso performs subset selection automatically, some variables have coefficient of zero. There is multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listing. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
+# Assessment metrics
 
+```{r}
+# Generate predicted values for sales
+lasso_test_preds <- 
+  lasso_wf_tuned %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
 
+# Create tibble for distribution plot
+lasso_pred <- 
+  tibble(observed = data_test$price, 
+         predicted = lasso_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+lasso_residual_plot <- 
+  lasso_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "Lasso Regularized Regression Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+lasso_residual_plot
+
+# Save plot for presentation
+ggsave("lasso_residual.png", plot = lasso_residual_plot)
+```
 
 
 
