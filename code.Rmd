@@ -1,26 +1,35 @@
 ---
-title: "R Notebook"
+title: "MLLA - Group Assignment"
 output: html_notebook
+date: "11/25/2020"
+author: 
+  - Goswin Nibbering
+  - Kylian van Noordenne
+  - Noora Mattsson
+  - Eline van Groningen
 ---
 
 # Setup notebook
 
-The following libraries are used in for in this notebook:
+The following libraries are used for this notebook:
 ```{r message = FALSE}
 # Load libraries
 library(tidyverse)
 library(tidymodels)
-library(readr)
 library(glmnet)
 library(leaps)
 library(naniar)
 library(skimr)
 library(knitr)
 library(corrplot)
+library(ranger)
+library(doParallel)
+library(themis)
+library(vip)
 ```
 
 # Load data listings
-```{r message = FALSE}
+```{r message = FALSE, warning = FALSE}
 # Read csv with listing information
 data <- read_csv(gzfile("listings.csv.gz"))
 ```
@@ -61,7 +70,7 @@ skim(data_sub) %>% knit_print()
 
 First, we converted all categorical en logical variables, that did not need any further cleaning, to type factors.
 ```{r Converting vectors}
-# Convert columns to factors 
+# Convert categorical vars to factors 
 data_sub$property_type <- factor(data_sub$property_type , 
                                  levels = unique(data_sub$property_type))
 data_sub$room_type <- factor(data_sub$room_type , 
@@ -102,7 +111,7 @@ data_sub$host_response_rate <-
 ## Clean amenities 
 
 The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string and the elements could not be access separately. Therefore, we cleaned the string, spitted it so we had a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
-```{r Generate all unique amenities}
+```{r Generate all unique amenities, message = FALSE}
 # Clean and split strings for amenities
 # Returns a list with all unique values
 clean_amenities <- function(x) {
@@ -125,14 +134,12 @@ for(amenities in data_sub$amenities_clean) {
     }
   }
 }
-
-# Show result
 amenities_unique
 ```
 
 ### Create new variables based information stored in amenities
 
-With the vector of all unique amenities we could create variables for all the separated variables. However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some are amenities are very specific and apply only to a few or one house. However, we created variables some of the amenities we think could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
+With the vector of all unique amenities seperate variables for all the separated variables could be created. However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some are amenities are very specific and apply only to a few or one house. However, variables are created for some of the amenities that could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
 ```{r Create new variables for amenities}
 # Create variable for WIFI and add to data set
 wifi <- vector()
@@ -188,7 +195,7 @@ data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 
 ## Clean host verification methods
 
-For the variable *host_verification* the same applies as to *amenities*. We have applied the same cleaning method, first we cleaned and splitted the strings, whereafther we generated a vector with all unique amenities.
+For the variable *host_verification* the same applies as to *amenities*. The cleaning method as for amenities applies, first we cleaned and splitted the strings, thereafter a vector with all unique amenities is generated.
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -213,14 +220,12 @@ for(verifications in data_sub$host_verifications_clean) {
     }
   }
 }
-
-# Show result
 verifications_unique
 ```
 
 ### Create variables based on information stored in host verifications
 
-We created separate variables for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
+Separate variables are created for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
 ```{r Create new variables for host verification method}
 # Create variable for host email and add to data set
 host_email <- vector()
@@ -285,7 +290,7 @@ data_sub <- data_sub %>%
 
 ## Inspect availability variables
 
-The variables *availability_30*, *availability_60*, *availability_90* and *availability_365* carry some of the same information. In order to inspect if we should include all variables in the data set, we plotted a correlation matrix. The plot below shows that all variables indicating the availability are strongly correlated. Therefore, we only include the variable *availability_30* for further analysis. 
+The variables *availability_30*, *availability_60*, *availability_90* and *availability_365* carry some of the same information. In order to inspect if all variables should be included in the data set, we plotted a correlation matrix. The plot below shows that all variables indicating the availability are strongly correlated. Therefore, only the variable *availability_30* is included for further analysis. 
 ```{r}
 # Plot correlation matrix
 data_sub %>% select_if(is.numeric) %>% 
@@ -300,7 +305,7 @@ data_sub <-
 
 ## Check missing data
 
-We have create a table to inspect with variables have missing cases and how many. The table shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
+In order to inspect which variables have missing cases and how many a table in constructed. The table shows the variables in the data set that contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values like replacing NA-values with the mean or median would not be appropriate since the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is nog included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. As a result, these variables are also excluded from the analyses. 
 ```{r Missing data check}
 # Count missing cases per variable
 na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
@@ -315,7 +320,7 @@ na_values %>%
   arrange(desc(na_count))
 ```
 
-Moreover, we have check how many cases contain missing values if the other values that have missing cases would be included in the 'final' data set. The table below shows that there are 206 cases which contain missing values, which is about $1.03\%$ of the entire data set. Since this is a very small proportion it is not very likely that deleting these causes would have a large impact on the predictions. Therefore, we delete the cases with missing values. 
+Moreover, a check is performed on the number of cases that contain missing values if the other values that have missing cases would be included in the 'final' data set. The table below shows that there are 206 cases which contain missing values, which is about $1.03\%$ of the entire data set. Since this is a very small proportion it is not very likely that deleting these causes would have a large impact on the predictions. Furthermore, all models that will be performed cannot handle missing values. Therefore, the cases with missing values are deleted. 
 ```{r Incomplete cases}
 # Compute incomplete rows
 data_sub %>% 
@@ -354,7 +359,7 @@ data_train <- training(data_split)
 data_test <- testing(data_split)
 ```
 
-# Inspecting the predicted variable
+## Inspecting the predicted variable
 
 In order to prevent data leakages we only inspect the predicted variable *price* in the training set. In order to inspect *price* we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skeweness make the data less interpretable and this could have an influence on performance of the models. 
 ```{r}
@@ -363,8 +368,9 @@ ggplot(data = data_train , aes(price)) +
   geom_histogram(col="black",
                  breaks=seq(0, max(data_train$price), by=75),
                  aes(fill=..count..)) +
-  labs(title="Histogram for Price", x="Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
+  labs(title="Distribution for Price", x="Price", y="Count") +
+  scale_fill_gradient("Count", low="green", high="red") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 In order to prevent this potential problems we have created a new distribution plot with a log transformed variable *price*. The plot shows that the distribution is less skewed and does not contain any large outliers. Resulting, the data that is more interpretable. Therefore, log transforming we will use the log transformed *price* for our models. 
@@ -373,8 +379,9 @@ In order to prevent this potential problems we have created a new distribution p
 ggplot(data = data_train , aes(log(price + 1))) +
   geom_histogram(col="black",
                  aes(fill=..count..)) +
-  labs(title="Histogram for Ln Price", x="Ln Price", y="Count") +
-  scale_fill_gradient("Count", low="green", high="red")
+  labs(title="Distribution for Ln Price", x="Ln Price", y="Count") +
+  scale_fill_gradient("Count", low="green", high="red") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
@@ -389,7 +396,7 @@ data_test <- testing(data_split)
 
 ```
 
-# K-fold cross validation 
+## K-fold cross validation 
 
 Moreover, we have generated 10-fold cross validation sets.
 ```{r}
@@ -399,12 +406,537 @@ data_folds <- vfold_cv(data_train, v = 10)
 data_folds
 ```
 
-# Remove data frames to avoid leakages and errors
+## Remove data frames to avoid leakages and errors
 ```{r}
 rm(data)
 rm(data_sub)
 rm(data_semi_final)
 rm(na_values)
+```
+
+
+# Linear Lasso Reqularized Regression Model
+
+In this section, regularized regression model will be specified and trained. Lasso penalty is chosen to simultaneously perform subset selection. Therefore, mixture is set to 1 in the model specification. 
+
+## Model specification
+
+Specification of lasso-regularized logistic regression model, where the penalty parameter will be tuned:
+```{r results='hide'}
+#specify the model and engine used
+lasso_linreg <- linear_reg(penalty = tune(), mixture = 1) %>% 
+  set_engine("glmnet")
+
+#check that model specified correctly:
+lasso_linreg %>% translate()
+```
+
+## Preprocessing recipe
+
+In this section, the recipe is formulated. All the variables included in the final dataset are included in the recipe, in order to perform the subset selection through the lasso penalty. As the property type and bed type have some categories with just a few observations, the categories that include less than 1% of the total number of observations are combined to "other" category to avoid sparse data. Additionally, dummies are created for all of the nominal variables. Lastly, all the variables are normalized.
+```{r results='hide'}
+#prepare the recipe by setting up the regression model, setting id as id variable, combining small categories to other class, and creating dummies and normalizing variables
+lasso_recipe <-  recipe(price ~ ., 
+                          data = data_train) %>% 
+                        update_role(id, new_role = "ID") %>%
+                        step_other(property_type, bed_type,  threshold = 0.01, other = "other values") %>% 
+                        step_dummy(all_nominal(), -all_outcomes()) %>%
+                        step_normalize(all_predictors(), -all_outcomes())
+lasso_recipe
+```
+
+Testing that this works properly:
+```{r}
+#prepare and bake the data (on training set) to check that the recipe prepares the data correctly
+data_baked <- lasso_recipe %>% prep(data_train) %>% bake(data_train)
+head(data_baked)
+```
+
+## Create Lasso Workflow
+```{r results='hide'}
+#combine the model specification and reciple to a workflow
+lasso_wf <- workflow() %>% 
+  add_recipe(lasso_recipe) %>% 
+  add_model(lasso_linreg)
+lasso_wf
+```
+
+## Tuning grids
+Next, the $\lambda$ parameter of the lasso model will be tuned. For that purpose, a tuning grid is specified. 
+```{r}
+#set tuning grid
+grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = 1, length.out = 70)))
+```
+
+## Tuning lasso-penalized linear regression
+10-k-cross-validation is used to tune the lasso-penalized linear regression, and the metrics are plotted against the different values of $\lambda$.
+```{r}
+ # perform grid search over the tuning grid of penalty values
+ lasso_tune <- lasso_wf %>% 
+  tune_grid(resamples = data_folds, 
+            grid = grid_lasso,
+            metrics = metric_set(mae, rmse, rsq_trad))
+```
+
+```{r message=TRUE}
+#save metrics in an object
+lasso_tune_metrics <- lasso_tune %>% 
+  collect_metrics()
+
+# Plot all results metrics 
+lasso_tune_metrics %>%
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5, colour = "red") + 
+  geom_point(colour = "red") + 
+   facet_wrap(~ .metric, scale = "free_y") +
+  scale_x_log10() + 
+  labs(y = "Lasso Performance Metrics", x = expression(lambda))
+
+# Plot MAE 
+lasso_tune_metrics %>% filter(.metric == "mae") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_linerange(alpha = 0.5, colour = "red") + 
+  geom_point(colour = "red") + 
+  scale_x_log10() + 
+  labs(y = "mae", x = expression(lambda), 
+       title = "Lasso Regresssion MAE")
+```
+
+Next, the Lambda value which results in best model performance on the train set is selected. It can be seen that as the RMSE is more sensitive for large residuals, the std errors of this metrics are larger compared to the standard errors of mean absolute error (mae). Therefore, mean absolute error is used to select the best model. 
+```{r}
+ #show best models with corresponding penalty values
+lasso_tune %>% show_best("mae")
+```
+
+The best model is selected using the one standard error rule, where the simplest model that has mae inside one standard error from the absolute best model is chosen to avoid overfitting.
+```{r}
+ #select best model according to 1 std error rule
+lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "mae", desc(penalty))
+lasso_1se_model
+```
+
+As can be seen, the best model has penalty parameter of 0.007.
+
+Finalize the workflow:
+```{r, results='hide'}
+#finalize lasso wf with the selected best model
+lasso_wf_tuned <- 
+  lasso_wf %>% 
+  finalize_workflow(lasso_1se_model)
+lasso_wf_tuned
+```
+```{r}
+#train the tuned model on all of the train data and test on the test data 
+lasso_last_fit <- lasso_wf_tuned %>% 
+  last_fit(data_split, metrics = metric_set(mae, rmse, rsq_trad))
+```
+
+The performance on the test set for this model is:
+```{r}
+#collect metrics from the model on the test set
+lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics
+```
+As seen above, the final lasso model has mean absolute error of 0.27, root mean squared error of 0.37 and R squared on 48,7% on the test data.
+
+To assess the importance of the predictor variables, model parameter estimates are calculated below:
+```{r}
+#fit the model on the training data and pull the model coefficients for the variables
+lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
+```
+
+As lasso performs subset selection automatically, some variables have coefficient of zero. There is multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listing. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
+
+# Random forest
+
+## Random forest specification 
+
+### Recipe
+Within this section, a random forest will be created. First a preprocessing recipe is created. 
+The id variable is updated to a seperate role, instead of being a predictor. 
+```{r Recipe}
+# Specify recipe
+rf_recipe <- recipe(price ~ ., data = data_train) %>%
+  update_role(id, new_role = "id var")
+
+rf_recipe
+```
+
+### Tune specifications
+
+Within this section the tune specificaiton are mentioned. The *mtry* is the number of features that are used at each split. THe exact mtry value will be tuned later on. Different values for trees where tested (200, 500 & 1000). Increasing the amount of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
+```{r message=FALSE}
+# Tune specification
+rf_tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
+  set_engine("ranger") %>%
+  set_mode("regression")
+```
+
+Combine the recipe and the model into a workflow that can be tuned.
+```{r message=FALSE}
+# Workflow creation
+rf_tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(rf_tune_spec)
+```
+
+A metric set that calculates the *Root Mean Square Error (rmse)*, *the Mean Absolute Error (mae)* and the *R-squared (rsq_trad)* is created. 
+```{r Class metrics}
+# Class metrics specification 
+class_metrics <- metric_set(rmse, mae, rsq_trad)
+```
+
+The command bellow allows us to do computations in parallel.
+```{r message=FALSE}
+registerDoParallel()
+```
+
+The tune grid was initially not optimized, but the command grid = tibble(mtry = 1:33) was utilized. This command checked all the variables. Based on the mae criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is take that will include the optimal values, as well mtry values of 1 up until 4. This allows us to see that the mtry is initially increase up until it reaches its optimal mtry solution.  
+```{r message=FALSE}
+# Define the tune grid 
+rf_tunegrid <- tibble(mtry = c(1:10))
+```
+
+```{r Grid}
+# Tune the grid
+set.seed(12345)
+rf_tune_res <- tune_grid(
+  rf_tune_wf,
+  resamples = data_folds,
+  grid = rf_tunegrid,
+  metrics = class_metrics
+)
+rf_tune_res
+```
+
+## Selecting tuning parameters 
+```{r Collect metrics}
+# Collect metrics
+rf_tune_res %>%
+  collect_metrics()
+```
+
+A plot for finding the best mtry, based on the criteria of the mae. A lower mae would indicate a better results, as a lower value indicates a lower error of prediction. 
+```{r Plot MAE}
+# Plot results all metrics
+rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("rmse", "mae", "rsq_trad")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y") +
+  labs(title = "Random Forest performance metrics")
+
+# Plot the MAE based
+rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "mae") %>% 
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err)) +
+  geom_errorbar(colour = "red") + 
+  geom_line(colour = "red") +
+  geom_point(colour = "red") +
+  labs(y = "mae", title = "Random Forest performance metrics")
+```
+
+This command will show the best mtry based on the mae criteria. 
+```{r Best MAE}
+# Find the mtry with the best mae
+rf_tune_res %>% show_best("mae")
+```
+
+## Best model selection
+
+The best model based on the MAE criteria is selected and eventually finalises into the workflow. 
+```{r Best model}
+# Best model selection
+best_rmse <- select_best(rf_tune_res, "mae")
+final_rf <- finalize_workflow(rf_tune_wf, best_rmse)
+final_rf
+```
+
+### Test set performance
+
+Now we can train the finalized workflow on our entire training rest
+```{r Finalise}
+# Finalise workflow on training set
+final_res <- final_rf %>%
+  last_fit(data_split, metrics = class_metrics)
+```
+
+The results based on the test set will be 
+```{r Test results}
+# Score on test data
+set.seed(54321)
+final_res %>%
+  collect_metrics()
+```
+
+### Variable importance 
+
+Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. We previousyly found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, that this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
+```{r Refit}
+# Refit the model
+rf_model_vi <- rand_forest(mtry = 7, trees = 200) %>%
+  set_engine("ranger", importance = "permutation")
+
+rf_vi_wf <- workflow() %>% 
+  add_model(rf_model_vi) %>% 
+  add_recipe(rf_recipe)
+
+# Fit the model again
+set.seed(12345)
+rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
+```
+
+We can use the refitted model in order the gather the variable importance 
+```{r Variable importance}
+# Variable importance 
+rf_vi_fit %>% pull_workflow_fit() %>% vi()
+```
+
+The variable importance indicates that the accommodates, bedrooms and room_type are the most important variables for predicting the logprice. The variables which are the least important for predicting the logprice,are bed_type, pool, and wifi. Pool and wifi actually have a negative importance, bus as this is close to a value of 0, it is chosen to still include those variables.
+
+```{r}
+# Plot variable importance
+var_importance_plot <-
+  rf_vi_fit %>%
+  pull_workflow_fit() %>% vip(geom = "point", num_features = 12) +
+  labs(title = "Random Forest Variable Importance") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+rf_vi_fit
+
+# Save plot for presentation
+ggsave("plots/rf_var_importance.png", plot = var_importance_plot,
+       height = 7 , width = 10)
+
+```
+
+# K-Nearest-Neighbors
+
+## Set up turning grid
+```{r}
+# Generate tuning grid for knn
+knn_tune_grid <- tibble(neighbors = 1:50*2-1)
+knn_tune_grid
+```
+
+## Specify a workflow 
+
+Something that should be noted for this recipe, is that only numeric variables are included. This is done for the reason that categorical variables translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
+```{r}
+# Specify model 
+knn_mod <- 
+  nearest_neighbor(neighbors = tune()) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn", scale=FALSE)
+knn_mod
+
+# Specify recipe
+knn_recipe <- 
+  recipe(price ~ ., data = data_train) %>% 
+  step_rm(all_nominal()) %>%
+  update_role(id, new_role = "id var") %>% 
+  step_normalize(all_predictors(), -id)
+knn_recipe
+```
+
+The normalization of the data is ensured through the following commands:
+```{r}
+# Check normalization 
+train_baked <- knn_recipe %>% prep(data_train) %>% bake(data_train)
+train_baked %>% head()
+round(colMeans(train_baked, 8))
+round(apply(train_baked, 2, sd), 8)
+rm(train_baked)
+```
+
+Below is the initial workflow for the k-nearest neighbors model is specified
+```{r}
+# Specify workflow
+knn_workflow <- 
+  workflow() %>% 
+  add_model(knn_mod) %>% 
+  add_recipe(knn_recipe)
+knn_workflow
+```
+
+## Tuning the number of nearest neighbours
+
+The code below serves to specificy the assessment metrics that are used. Moreover, a grid search is performed using the validation sets. 
+```{r message = FALSE}
+# Store metrics in variable
+metrics_reg <- metric_set(rmse, mae, rsq_trad)
+
+# Perform grid search using validation sets
+knn_tune_res <- 
+  knn_workflow %>% 
+  tune_grid(resamples = data_folds,
+            grid = knn_tune_grid, 
+            metrics = metrics_reg) 
+
+# Plot results metrics
+knn_metrics_plot <- 
+  knn_tune_res %>%  collect_metrics() %>% 
+  ggplot(aes(x = neighbors, y = mean)) +
+  geom_point(colour = "red") + geom_line(colour = "red") +
+  facet_wrap(~ .metric, scale = "free_y") +
+  labs(title = "KNN Performance Metrics") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+knn_metrics_plot
+
+autoplot(knn_tune_res)
+```
+
+The plot output shows some metrics that plot the mean of the performance metrics. We should aim for the mae (mean absolute error) and rmse (root mean square error) to be as low as possible, and the rsq_trad (R-squared) to be as high as possible. We used the mae metric to determine the optimal k-neighbors for our model, which arrived at 51 neighbors. This can be read from the mae graph, by looking at the corresponsing k-neighbors for the lowest mean of mae. 
+
+Moreover, from the last plot the elbow trend can somewhat clearly be seen: the metrics reach their optimum point after which the level off and slowly increase for mae and rmse and decrease for rqs_trad.
+
+The model with the optimal number of k-nearest neighbors can then be selected as follows:
+```{r}
+# Generate best model
+knn_best_model <- select_best(knn_tune_res, metric = "mae")
+```
+
+## Finalize workflow
+
+Below the finalized workflow is made, which automatically picks the best KNN-model defined above (which is specified by the mae metric)
+```{r}
+# Finalize workflow
+knn_workflow_final <- 
+  knn_workflow %>% 
+  finalize_workflow(knn_best_model)
+knn_workflow_final
+```
+
+## Last fit 
+
+A final workflow can be set up to check the final fit. Furthermore, the performance metrics for the best KNN-model are selected and put in a table.
+```{r}
+# Train and test the data set
+knn_last_fit <- 
+  knn_workflow_final %>% 
+  last_fit(data_split, 
+           metrics = metrics_reg)
+```
+
+## KNN variable importance 
+KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
+
+
+# Model comparison
+
+In order to assess the performance of the three models the results of three metrics are compared. 
+
+1. Root mean squared error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals. 
+2. Mean absolute error. The objective is to minimize the result of this metric. This metrics is more robust and therefore less sensitive to observations with large absolute residuals. However, because it uses the mean and therefore it is not insensitive to skewed distributions. 
+3. R-squared. An attraction is that the metric is unitless and can therefore be compared across models. A downside is that is not robust, since it measures essential correlation and not agreement. 
+
+## Assess appropriateness metrics 
+
+In order to check if the metrics are an appropriate fit, the residuals distributions of the models are plotted. Since the plots below show no large outliers and no skewed distributions, there are no implications for root mean squared error and mean absolute error. 
+```{r echo = TRUE}
+# Generate predicted values for sales
+lasso_test_preds <- 
+  lasso_wf_tuned %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
+
+# Create tibble for distribution plot
+lasso_pred <- 
+  tibble(observed = data_test$price, 
+         predicted = lasso_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+lasso_residual_plot <- 
+  lasso_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "Lasso Regularized Regression Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
+lasso_residual_plot
+
+# Generate predicted values for sales
+set.seed(12345)
+rf_test_preds <- 
+  rf_vi_wf %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
+
+# Create tibble for distribution plot
+rf_pred <- 
+  tibble(observed = data_test$price, 
+         predicted = rf_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+rf_residual_plot <- 
+  rf_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "Random Forest Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
+rf_residual_plot
+
+# Generate predicted values for price
+knn_test_preds <- 
+  knn_workflow_final %>% 
+  fit(data = data_train) %>%
+  predict(data_test) %>% 
+  pull(.pred)
+
+# Create tibble for distribution plot
+knn_metrics <- 
+  tibble(observed = data_test$price, 
+         predicted = knn_test_preds, 
+         residual = observed - predicted)
+
+# Plot distribution residuals
+knn_residual_plot <- 
+  knn_pred %>% 
+  ggplot(aes(x = residual)) +
+  geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
+  geom_rug() +
+  labs(title = "KNN Distribution Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
+knn_residual_plot
+
+```
+
+## Assessment metrics
+
+The table below shows results for the metrics for the three models. When assessing the metrics and their objectives, the results show that the random forest model peforms best on all metrics. Therefore, the random forest is considered to be the best model. 
+```{r}
+# Generate table with 
+lasso_metrics_compare <- 
+  lasso_test_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "lasso regression")
+rf_metrics_compare <- 
+  final_res %>%
+  collect_metrics() %>% 
+  mutate(model = "random forest")
+knn_metrics_compare <- 
+  knn_last_fit %>% 
+  collect_metrics %>% 
+  select(-.estimator) %>% 
+  mutate(model = "knn reg")
+lasso_metrics_compare %>%
+  bind_rows(rf_metrics_compare, knn_metrics_compare) %>% 
+  select(-.estimator) %>% 
+  pivot_wider(names_from = .metric, values_from = .estimate)
 ```
 
 
