@@ -34,7 +34,7 @@ library(vip)
 data <- read_csv(gzfile("listings.csv.gz"))
 ```
 
-#Part 1: Data Cleaning and Feature Selection
+# Part 1: Data Cleaning and Feature Selection
 
 # Select variables of interest
 The goal of the assignment is to build a model that predicts the prices of listings on AirBnB in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Afterwards, hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews provide information about a listing after it has been published. Therefore, these variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
@@ -399,7 +399,6 @@ data_test <- testing(data_split)
 ```
 
 
-#Part 2: Modelling approaches
 ## K-fold cross validation 
 
 Moreover, we have generated 10-fold cross validation sets.
@@ -418,6 +417,7 @@ rm(data_semi_final)
 rm(na_values)
 ```
 
+# Part 2: Modelling approaches
 
 # Linear Lasso Regularized Regression Model
 
@@ -831,7 +831,7 @@ knn_last_fit <-
 KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
 
 
-#Part 3: Model Comparison
+# Part 3: Model Comparison
 
 In order to assess the performance of the three models the results of three metrics are compared. 
 
