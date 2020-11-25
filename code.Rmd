@@ -3,10 +3,10 @@ title: "MLLA - Group Assignment"
 output: html_notebook
 date: "11/25/2020"
 author: 
-  - Goswin Nibbering (563285) 
-  - Kylian van Noordenne (450752) 
-  - Noora Mattsson (477100) 
-  - Eline van Groningen (414846) 
+  - Goswin Nibbering - 563285
+  - Kylian van Noordenne - 450752 
+  - Noora Mattsson - 477100
+  - Eline van Groningen - 414846
 ---
 
 # Setup notebook
@@ -33,6 +33,8 @@ library(vip)
 # Read csv with listing information
 data <- read_csv(gzfile("listings.csv.gz"))
 ```
+
+#Part 1: Data Cleaning and Feature Selection
 
 # Select variables of interest
 The goal of the assignment is to build a model that predicts the prices of listings on AirBnB in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Afterwards, hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning. All variables including information on the reviews provide information about a listing after it has been published. Therefore, these variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
@@ -68,7 +70,7 @@ skim(data_sub) %>% knit_print()
 
 ## Basic cleaning
 
-First, we converted all categorical en logical variables, which did not need any further cleaning, to type factors.
+First, we converted all categorical and logical variables, which did not need any further cleaning, to data type factor.
 ```{r Converting vectors}
 # Convert categorical vars to factors 
 data_sub$property_type <- factor(data_sub$property_type , 
@@ -110,7 +112,7 @@ data_sub$host_response_rate <-
 
 ## Clean amenities 
 
-The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and spitted it, so we had a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
+The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and splitted it to a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
 ```{r Generate all unique amenities, message = FALSE}
 # Clean and split strings for amenities
 # Returns a list with all unique values
@@ -396,6 +398,8 @@ data_test <- testing(data_split)
 
 ```
 
+
+#Part 2: Modelling approaches
 ## K-fold cross validation 
 
 Moreover, we have generated 10-fold cross validation sets.
@@ -699,7 +703,7 @@ We can use the refitted model in order the gather the variable importance
 rf_vi_fit %>% pull_workflow_fit() %>% vi()
 ```
 
-The variable importance indicates that the accommodates, bedrooms and room_type are the most important variables for predicting the logprice. The variables which are the least important for predicting the logprice,are bed_type, pool, and wifi. Pool and wifi actually have a negative importance, but as this is close to a value of 0, it is chosen to still include those variables.
+The variable importance indicates that the accommodates, bedrooms and room_type are the most important variables for predicting the price. The variables which are the least important for predicting the price are bed_type, pool, and wifi. Pool and wifi actually have a negative importance, but as this is close to a value of 0, it is chosen to still include those variables.
 
 ```{r}
 # Plot variable importance
@@ -722,12 +726,11 @@ ggsave("plots/rf_var_importance.png", plot = var_importance_plot,
 ```{r}
 # Generate tuning grid for knn
 knn_tune_grid <- tibble(neighbors = 1:50*2-1)
-knn_tune_grid
 ```
 
 ## Specify a workflow 
 
-Something that should be noted for this recipe, is that only numeric variables are included. This is done for the reason that categorical variables translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
+Something that should be noted for this recipe is that only numeric variables are included. This is done for the reason that categorical variables translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
 ```{r}
 # Specify model 
 knn_mod <- 
@@ -828,7 +831,7 @@ knn_last_fit <-
 KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
 
 
-# Model comparison
+#Part 3: Model Comparison
 
 In order to assess the performance of the three models the results of three metrics are compared. 
 
@@ -938,5 +941,12 @@ lasso_metrics_compare %>%
   select(-.estimator) %>% 
   pivot_wider(names_from = .metric, values_from = .estimate)
 ```
+
+# Part 4: Recommendations
+For this assignment we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest and finally a K-Nearest neighbours model. The models are assessed on three different metrics, namely the root mean squared error (RMSE), the mean squared error (MAE) and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
+
+Furthermore, the variable importance of the random forest indicates which variables lead to the highest increase in r squared. Accommodates, bedrooms and room_type are the most important variables for predicting the price. Bed_type, pool, and wifi are the least important for predicting the price. We therefore advise hosts to specifically look at the variables with a high importance, as these variables have the highest impact on their predicted price.
+
+How are these findings of use to Airbnb? Essentially, this project has sought to examine three approaches to competitively set listing prices of Airbnb listings. Considering our results, we advise Airbnb to use a random forest model in their projects that deal with optimal pricing of listings. As the model performance metrics were used to compare the models and to select the best one, these metrics should not be used to estimate the generalization error, or how well the model would perform on completely new data. For this purpose, it is recommended that the random forest model will be further tested in online environment before scaling up its implementation. Additionally, in practice, the model will provide the prediction in log prices, and this has to be converted to euros. For example, log price prediction of 4.09 would mean price of €59.74. 
 
 
