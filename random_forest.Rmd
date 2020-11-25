@@ -169,8 +169,11 @@ var_importance_plot <-
 rf_vi_fit
 
 # Save plot for presentation
-ggsave("plots/rf_var_importance.png", plot = variable_importance_plot)
+ggsave("plots/rf_var_importance.png", plot = var_importance_plot,
+       height = 7 , width = 10)
+
 ```
+
 ```{r}
 # Generate predicted values for sales
 set.seed(12345)
@@ -193,7 +196,8 @@ rf_residual_plot <-
   geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
   geom_rug() +
   labs(title = "Random Forest Distribution Residuals") +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
 rf_residual_plot
 
 # Save plot for presentation

@@ -79,7 +79,6 @@ autoplot(knn_tune_res)
 ```{r}
 # Generate best model
 knn_best_model <- select_best(knn_tune_res, metric = "mae")
-knn_best_model
 ```
 
 ## Finalize workflow
@@ -135,6 +134,7 @@ knn_residual_plot <-
   labs(title = "KNN Distribution Residuals") +
   theme(plot.title = element_text(hjust = 0.5)) +
   coord_cartesian(ylim = c(0, 1.5))
+knn_residual_plot
 
 # Save plot for presentation
 ggsave("plots/knn_residual.png", plot = knn_residual_plot)

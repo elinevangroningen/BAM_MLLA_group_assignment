@@ -148,7 +148,8 @@ lasso_residual_plot <-
   geom_density(bw = 0.15, fill = "springgreen", alpha = 0.5) +
   geom_rug() +
   labs(title = "Lasso Regularized Regression Distribution Residuals") +
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(ylim = c(0, 1.5))
 lasso_residual_plot
 
 # Save plot for presentation
