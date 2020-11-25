@@ -4,6 +4,7 @@ author: "Kylian van Noordenne"
 date: "22-11-2020"
 output: html_document
 ---
+### Random forest
 
 # Packages 
 ```{r libraries }
@@ -13,7 +14,7 @@ library(themis)
 library(tibble)
 library(vip)
 ```
-
+## Random forest specification 
 # Recipe
 Within this section, a random forest will be created. First a preprocessing recipe is created. 
 The id variable is updated to a seperate role, instead of being a predictor. 
@@ -24,11 +25,11 @@ rf_recipe <- recipe(price ~ ., data = data_train) %>%
 rf_recipe
 ```
 
-# Specify the random forest
+# Tune specifications
 Within this section the tune specificaiton are mentioned. The *mtry* is the number of features that are used at each split. THe exact mtry value will be tuned later on. Different values for trees where tested (200, 500 & 1000). Increasing the amount of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
 ```{r message=FALSE}
 # Tune specification
-tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
+rf_tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
   set_engine("ranger") %>%
   set_mode("regression")
 ```
@@ -37,9 +38,9 @@ tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
 Combine the recipe and the model into a workflow that can be tuned.
 ```{r message=FALSE}
 # Workflow creation
-tune_wf <- workflow() %>%
+rf_tune_wf <- workflow() %>%
   add_recipe(rf_recipe) %>%
-  add_model(tune_spec)
+  add_model(rf_tune_spec)
 ```
 
 A metric set that calculates the *Root Mean Square Error (rmse)*, *the Mean Absolute Error (mae)* and the *R-squared (rsq_trad)* is created. 
@@ -53,34 +54,34 @@ The command bellow allows us to do computations in parallel.
 registerDoParallel()
 ```
 
-The tune grid was initially not optimized, but the command grid = tibble(mtry = 1:33) was utilized. This command checked all the variables. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. After this finding, these optimal mtry values were taken as mtry input to save computational time.  
+The tune grid was initially not optimized, but the command grid = tibble(mtry = 1:33) was utilized. This command checked all the variables. Based on the mae criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is take that will include the optimal values, as well mtry values of 1 up until 4. This allows us to see that the mtry is initially increase up until it reaches its optimal mtry solution.  
 ```{r message=FALSE}
 # Define the tune grid 
-tunegrid <- tibble(mtry = c(1:10))
+rf_tunegrid <- tibble(mtry = c(1:10))
 ```
 
 ```{r Grid}
 # Tune the grid
 set.seed(12345)
-tune_res <- tune_grid(
-  tune_wf,
+rf_tune_res <- tune_grid(
+  rf_tune_wf,
   resamples = data_folds,
-  grid = tunegrid,
+  grid = rf_tunegrid,
   metrics = class_metrics
 )
-tune_res
+rf_tune_res
 ```
 
 # Selecting tuning parameters 
 ```{r Collect metrics}
 # Collect metrics
-tune_res %>%
+rf_tune_res %>%
   collect_metrics()
 ```
 A plot for finding the best mtry, based on the criteria of the mae. A lower mae would indicate a better results, as a lower value indicates a lower error of prediction. 
 ```{r Plot MAE}
 # Plot results all metrics
-tune_res %>%
+rf_tune_res %>%
   collect_metrics() %>%
   filter(.metric %in% c("rmse", "mae", "rsq_trad")) %>%
   ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
@@ -91,7 +92,7 @@ tune_res %>%
   facet_grid(.metric ~ ., scales = "free_y") 
 
 # Plot the MAE based
-tune_res %>%
+rf_tune_res %>%
   collect_metrics() %>%
   filter(.metric == "mae") %>% 
   ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err)) +
@@ -101,10 +102,10 @@ tune_res %>%
   labs(y = "mae")
 ```
 
-This command allows will show the best mtry based on the MAE criteria. However, initially it showed 6, 9, 14, 15 and 20. THerefore, these values are shown again as the grid is limited to only using those optimal mtry values.  
+This command will show the best mtry based on the mae criteria. 
 ```{r Best MAE}
-# Find the mtry with the best MAE
-tune_res %>% show_best("mae")
+# Find the mtry with the best mae
+rf_tune_res %>% show_best("mae")
 ```
 
 # Best model selection
@@ -112,12 +113,12 @@ tune_res %>% show_best("mae")
 The best model based on the MAE criteria is selected and eventually finalises into the workflow. 
 ```{r Best model}
 # Best model selection
-best_rmse <- select_best(tune_res, "mae")
-final_rf <- finalize_workflow(tune_wf, best_rmse)
+best_rmse <- select_best(rf_tune_res, "mae")
+final_rf <- finalize_workflow(rf_tune_wf, best_rmse)
 final_rf
 ```
 
-# Test set performance
+## Test set performance
 
 Now we can train the finalized workflow on our entire training rest
 ```{r Finalise}
@@ -134,12 +135,12 @@ final_res %>%
   collect_metrics()
 ```
 
-# Variable importance 
+## Variable importance 
 
-Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. 
+Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. We previousyly found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, that this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
 ```{r Refit}
 # Refit the model
-rf_model_vi <- rand_forest(mtry = 6, trees = 200) %>%
+rf_model_vi <- rand_forest(mtry = 7, trees = 200) %>%
   set_engine("ranger", importance = "permutation")
 
 rf_vi_wf <- workflow() %>% 
