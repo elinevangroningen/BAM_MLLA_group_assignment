@@ -152,7 +152,7 @@ lasso_residual_plot <-
 lasso_residual_plot
 
 # Save plot for presentation
-ggsave("lasso_residual.png", plot = lasso_residual_plot)
+ggsave("plots/lasso_residual.png", plot = lasso_residual_plot)
 ```
 
 

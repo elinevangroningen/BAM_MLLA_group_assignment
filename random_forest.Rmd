@@ -169,7 +169,7 @@ var_importance_plot <-
 rf_vi_fit
 
 # Save plot for presentation
-ggsave("rf_var_importance.png", plot = variable_importance_plot)
+ggsave("plots/rf_var_importance.png", plot = variable_importance_plot)
 ```
 ```{r}
 # Generate predicted values for sales
@@ -197,6 +197,6 @@ rf_residual_plot <-
 rf_residual_plot
 
 # Save plot for presentation
-ggsave("rf_residual.png", plot = rf_residual_plot)
+ggsave("plots/rf_residual.png", plot = rf_residual_plot)
 ```
 
