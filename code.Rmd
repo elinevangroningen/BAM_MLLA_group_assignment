@@ -785,9 +785,9 @@ knn_tune_grid <- tibble(neighbors = 1:50*2-1)
 
 ### Specify a workflow 
 
-Something that should be noted for this recipe is that only numeric variables are included. This is done for the reason that categorical variables translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
+Something that should be noted for this recipe is that only numeric variables are included. This is done for the reason that categorical variables with more than two levels translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
 
-A mentioned, categorical variables are not included as there is no ranking within these variables. However, a certain type of categorical variables, namely binary variables, do contain a ranking and can be utilised within the KNN-model. Our initial model included the binary variables and this yielded the following results:
+A mentioned, categorical variables are not included as there is no ranking within these variables. However, categorical variables with two levels, binary variables, do contain a ranking and can be utilized within the KNN-model. Our initial model included the binary variables and this yielded the following results:
 
 | Metric                 | .estimate                                                                                     
 |------------------------|------------------------
@@ -795,7 +795,7 @@ A mentioned, categorical variables are not included as there is no ranking withi
 | mae                    | 0.3093942                                                        
 | rsq_trad               | 0.3641607
 
-As the following section will show, this is an non-optimal result compared to not including the binary variables. Therefore, it is chosen to remove all the categorical variables (implying the binary variables as well) from the KNN-model. Moreover, it should be kept in mind that how well a KNN-model works can decline when too many feature are added to the model. These points are all kept in mind in specifying the recipe for the KNN-model.
+As the following section will show, this is an non-optimal result compared to not including the binary variables (see part 3). Therefore, it is chosen to remove all the categorical variables (implying the binary variables as well) from the KNN-model. Moreover, it should be kept in mind that how well a KNN-model works can decline when too many feature are added to the model. These points are all kept in mind in specifying the recipe for the KNN-model.
 ```{r}
 # Specify model 
 knn_mod <- 
@@ -986,7 +986,6 @@ knn_residual_plot <-
   theme(plot.title = element_text(hjust = 0.5)) +
   coord_cartesian(ylim = c(0, 1.5))
 knn_residual_plot
-
 ```
 
 ## Assessment metrics

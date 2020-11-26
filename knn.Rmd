@@ -4,6 +4,20 @@ output: html_notebook
 ---
 
 ## Set up turning grid
+
+```{r}
+var_levels <- sapply(data_train, levels)
+length(var_levels)
+vars_multiple_levels <- c()
+for(i in 1:length(var_levels)) {
+  if(length(var_levels[names(var_levels[i])][[1]]) > 2) {
+    vars_multiple_levels <- append(vars_multiple_levels, names(var_levels[i]))
+  }
+}
+vars_multiple_levels
+```
+
+
 ```{r}
 # Generate tuning grid for knn
 knn_tune_grid <- tibble(neighbors = 1:50*2-1)
@@ -24,7 +38,9 @@ knn_mod
 # Specify recipe
 knn_recipe <- 
   recipe(price ~ ., data = data_train) %>% 
-  step_rm(all_nominal()) %>%
+  step_rm(property_type, room_type, host_response_time, neighbourhood_cleansed,
+          neighbourhood_cleansed) %>%
+  step_dummy(all_nominal()) %>%
   update_role(id, new_role = "id var") %>% 
   step_normalize(all_predictors(), -id)
 knn_recipe
@@ -52,7 +68,7 @@ knn_workflow
 
 ## Tuning the number of nearest neighbours
 
-The code below serves to specificy the assessment metrics that are used. Moreover, a grid search is performed using the validation sets. 
+The code below serves to specify the assessment metrics that are used. Moreover, a grid search is performed using the validation sets. 
 ```{r}
 # Store metrics in variable
 metrics_reg <- metric_set(rmse, mae, rsq_trad)
