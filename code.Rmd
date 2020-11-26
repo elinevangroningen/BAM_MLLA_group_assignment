@@ -5,15 +5,18 @@ author:
 - Kylian van Noordenne - 450752
 - Noora Mattsson - 477100
 - Eline van Groningen - 414846
-date: "11/25/2020"
+date: "11/26/2020"
 output:
   html_document:
     df_print: paged
+    toc: yes
+  htm_notebook:
+    toc: yes
 ---
 
 # Introduction
 
-The aim of this report is to develop a predictive model, based on past Airbnb listings in Amsterdam, to help new Airbnb users set competitive prices for their listings. To do so, three different models are considered. These are lasso regularized linear regression, k-nearest-neighbors, and random forest model. The best model is selected based on the predictive performance on the test set. For this purpose, the dataset is split into a training and testing set. Furthermore, each of these models requires model tuning, which is completed using 10-k cross-validation on the training set. 
+The aim of this report is to develop a predictive model, based on past Airbnb listings in Amsterdam, to help new Airbnb users set competitive prices for their listings. To do so, three different models are considered. These are lasso regularized linear regression, k-nearest-neighbors, and random forest model. The best model is selected based on the predictive performance on the test set. For this purpose, the data set is split into a training and testing set. Furthermore, each of these models requires model tuning, which is completed using 10-k cross-validation on the training set. 
 
 In the following sections, the data cleaning and feature selection process is explained, after which all the three models are tuned and tested. After this, the performance of each model is assessed, and the best model is selected. Finally, the last section discusses the recommendations based on the findings.
 
@@ -603,7 +606,7 @@ lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy()
 
 As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
-# Random Forest
+## Random Forest
 
 ### Random forest specification 
 
@@ -887,9 +890,12 @@ KNN, as a method, does not come with a prediction for the importance or coeffici
 
 In order to assess the performance of the three models the results of three metrics are compared. 
 
-1. Root mean squared error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals. 
+1. Root mean squared error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals.
+    - $RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}{\Big(\frac{y_i - \hat{y_i}}{\sigma_i}\Big)^2}}$
 2. Mean absolute error. The objective is to minimize the result of this metric. This metric is more robust and therefore less sensitive to observations with large absolute residuals. However, because it uses the mean, it is therefore not insensitive to skewed distributions. 
-3. R-squared. An attraction is that the metric is unitless and can therefore be compared across models. A downside is that is not robust, since it essentially measures correlation and not agreement. 
+    - $MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y_i}|$
+3. R-squared. An attraction is that the metric is unitless and can therefore be compared across models. A downside is that is not robust, since it essentially measures correlation and not agreement.
+    - $R^2(y, \hat{y}) = 1 = \frac{\sum_{i=1}^{n}(y_i - \hat{y_i})}{\sum_{i=1}^{n}(y_i - \overline{y}_*)}$ 
 
 ## Assess appropriateness metrics 
 
