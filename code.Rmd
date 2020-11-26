@@ -45,7 +45,7 @@ library(vip)
 data <- read_csv(gzfile("listings.csv.gz"))
 ```
 
-# Part 1: Data Cleaning and Feature Selection
+# **Part 1: Data Cleaning and Feature Selection**
 
 ## Select variables of interest
 
@@ -344,6 +344,8 @@ data_sub %>%
   summary(count())
 ```
 
+## Final data set 
+
 ```{r Generate final data set}
 # Select variables for data set
 variables_analysis <-   
@@ -360,7 +362,7 @@ data_semi_final <- data_semi_final %>%
 data_final <- data_semi_final[complete.cases(data_semi_final), ]
 ```
 
-Here is a table describing the features included in the final data set:
+The final data set consists of 19817 observations of 35 variables. The table below describes the features included in the final data set:
 
 | Variable Name                                   | Variable Description                                                                                     
 |-------------------------------------------------|----------------------------------------------------------------------------------------------------------
@@ -468,7 +470,7 @@ rm(data_semi_final)
 rm(na_values)
 ```
 
-# Part 2: Modelling Approaches
+# **Part 2: Modelling Approaches**
 
 ## Linear Lasso Regularized Regression Model
 
@@ -597,6 +599,8 @@ lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
 lasso_test_metrics
 ```
 As seen above, the final lasso model has mean absolute error of 0.27, root mean squared error of 0.37 and R squared on 48,7% on the test data.
+
+### Variable importance
 
 To assess the importance of the predictor variables, model parameter estimates are calculated below:
 ```{r}
@@ -736,9 +740,9 @@ final_res %>%
   collect_metrics()
 ```
 
-#### Variable importance 
+### Variable importance 
 
-Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. We previousyly found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, that this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
+Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. We previously found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, that this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
 ```{r Refit}
 # Refit the model
 rf_model_vi <- rand_forest(mtry = 7, trees = 200) %>%
@@ -768,12 +772,7 @@ var_importance_plot <-
   pull_workflow_fit() %>% vip(geom = "point", num_features = 12) +
   labs(title = "Random Forest Variable Importance") +
   theme(plot.title = element_text(hjust = 0.5)) 
-rf_vi_fit
-
-# Save plot for presentation
-ggsave("plots/rf_var_importance.png", plot = var_importance_plot,
-       height = 7 , width = 10)
-
+var_importance_plot
 ```
 
 ## K-Nearest-Neighbors
@@ -881,12 +880,12 @@ knn_last_fit <-
            metrics = metrics_reg)
 ```
 
-### KNN variable importance 
+### Variable importance 
 
 KNN, as a method, does not come with a prediction for the importance or coefficients of variables. The reason for this has to do with the fact that prediction in a k-nearest neighbor model relies exclusively on the distance between data points. With this comes the added implication that no information about the relative importance of variables can be derived from it.
 
 
-# Part 3: Model Comparison
+# **Part 3: Model Comparison**
 
 In order to assess the performance of the three models the results of three metrics are compared. 
 
@@ -895,7 +894,7 @@ In order to assess the performance of the three models the results of three metr
 2. Mean absolute error. The objective is to minimize the result of this metric. This metric is more robust and therefore less sensitive to observations with large absolute residuals. However, because it uses the mean, it is therefore not insensitive to skewed distributions. 
     - $MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y_i}|$
 3. R-squared. An attraction is that the metric is unitless and can therefore be compared across models. A downside is that is not robust, since it essentially measures correlation and not agreement.
-    - $R^2(y, \hat{y}) = 1 = \frac{\sum_{i=1}^{n}(y_i - \hat{y_i})}{\sum_{i=1}^{n}(y_i - \overline{y}_*)}$ 
+    - $R^2(y, \hat{y}) = 1 - \frac{\sum_{i=1}^{n}(y_i - \hat{y_i})}{\sum_{i=1}^{n}(y_i - \overline{y}_*)}$ 
 
 ## Assess appropriateness metrics 
 
@@ -1004,7 +1003,7 @@ lasso_metrics_compare %>%
   pivot_wider(names_from = .metric, values_from = .estimate)
 ```
 
-# Part 4: Recommendations
+# **Part 4: Recommendations**
 
 For this assignment we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest and finally a K-Nearest Neighbours model. The models are assessed on three different metrics, namely the root mean squared error (RMSE), the mean squared error (MAE) and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
 
