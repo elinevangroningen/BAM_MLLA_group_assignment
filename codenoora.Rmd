@@ -134,7 +134,7 @@ lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy()
 
 As lasso performs subset selection automatically, some variables have coefficient of zero. There is multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listing. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
-# Assessment metrics
+## Assessment metrics
 ```{r}
 # Generate predicted values for sales
 lasso_test_preds <- 
