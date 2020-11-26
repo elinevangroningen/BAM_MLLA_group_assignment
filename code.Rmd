@@ -13,7 +13,9 @@ output:
 
 # Introduction
 
-The goal of the assignment is to build a model that predicts the prices of listings on Airbnb in Amsterdam. The outcomes of the model will be used for suggestions to the new hosts about the average platform price for similar listings. Afterwards, hosts can choose whether they want to use the recommendation to set their prices accordingly in order to be competitive and gain attention from the guests since the beginning.
+The aim of this report is to develop a predictive model, based on past Airbnb listings in Amsterdam, to help new Airbnb users set competitive prices for their listings. To do so, three different models are considered. These are lasso regularized linear regression, k-nearest-neighbors, and random forest model. The best model is selected based on the predictive performance on the test set. For this purpose, the dataset is split into a training and testing set. Furthermore, each of these models requires model tuning, which is completed using 10-k cross-validation on the training set. 
+
+In the following sections, the data cleaning and feature selection process is explained, after which all the three models are tuned and tested. After this, the performance of each model is assessed, and the best model is selected. Finally, the last section discusses the recommendations based on the findings.
 
 # Setup notebook
 
@@ -371,16 +373,16 @@ Here is a table describing the features included in the final data set:
 | host_listings_count                             | Number of total listings of a host
 | host_response_time                              | Average time it takes for a host to respond
 | host_identity_verified                          | Whether a host verified his identify on Airbnb 
-| neighbourhood_cleansed                          | Neighbourhoud location of the listed property
+| neighbourhood_cleansed                          | Neighborhood location of the listed property
 | guests_included                                 | Number of guests included within a listing 
 | extra_people                                    | Number of extra people allowed at the listing
 | minimum_nights                                  | The minimum amount of nights that a guest has to book regarding this listing
 | maximum_nights                                  | The maximum amount of nights that a guest is allowed to book regarding this listing
-| availability_30                                 | The amount of days for which a particular host is avialable in 30 days
+| availability_30                                 | The amount of days for which a particular host is available in 30 days
 | instant_bookable                                | Whether guests can directly book without a inquiry
 | cancellation_policy                             | The set policy regarding guest cancellation 
 | require_guest_profile_picture                   | Whether the potential guest needs a profile picture in order to book the listing
-| require_guest_phone_verification                | Whether the potential guest needs a phone verificaiton in order to book the listing
+| require_guest_phone_verification                | Whether the potential guest needs a phone verification in order to book the listing
 | calculated_host_listings_count                  | The number of total host listings
 | calculated_host_listings_count_entire_homes     | The number of total entire home listings of a specific host
 | calculated_host_listings_count_private_rooms    | The number of total private room listings of a specific host
