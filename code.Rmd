@@ -355,50 +355,46 @@ data_semi_final <- data_semi_final %>%
 data_final <- data_semi_final[complete.cases(data_semi_final), ]
 ```
 
-Here is a table describing these features included in the final data set:
+Here is a table describing the features included in the final data set:
 
 | Variable Name                                   | Variable Description                                                                                     
 |-------------------------------------------------|----------------------------------------------------------------------------------------------------------
 | id                                              | Listing ID
-| price                                           | Price listing (€)                                                        
-| property_type                                   |  
-| room_type                                       |  
-| accommodates                                    |         
-| bathrooms                                       | 
-| bedrooms                                        | 
-| beds                                            | 
-| bed_type                                        | 
-| host_since                                      | 
-| host_response_time                              | 
-| host_response_rate                              | 
-| host_neighbourhood                              | 
-| host_listings_count                             | 
-| host_verifications                              | 
-| host_identity_verified                          | 
-| neighbourhood_cleansed                          | 
-| square_feet                                     | 
-| cleaning_fee                                    | 
-| guests_included                                 | 
-| extra_people                                    | 
-| minimum_nights                                  | 
-| maximum_nights                                  | 
-| availability_30                                 | 
-| instant_bookable                                |  
-| cancellation_policy                             | 
-| require_guest_profile_picture                   | 
-| require_guest_phone_verification                | 
-| calculated_host_listings_count                  | 
-| calculated_host_listings_count_entire_homes     | 
-| calculated_host_listings_count_private_rooms    |  
-| calculated_host_listings_count_shared_rooms     | 
-| wifi                                            | 
-| pool                                            | 
-| hot_tub                                         | 
-| tv                                              | 
-| email                                           | 
-| phone                                           | 
-| facebook                                        | 
-| government_id                                   | 
+| price                                           | Log transformed price listing (€)                                                        
+| property_type                                   | Type of property that is rented out
+| room_type                                       | Type of room that is rented out
+| accommodates                                    | Number of people that can be accommodated in the rented property
+| bathrooms                                       | Number of bathrooms in the property
+| bedrooms                                        | Number of bedrooms in the property
+| beds                                            | Number of beds in the property
+| bed_type                                        | Type of bed present within the property
+| host_listings_count                             | Number of total listings of a host
+| host_response_time                              | Average time it takes for a host to respond
+| host_identity_verified                          | Whether a host verified his identify on Airbnb 
+| neighbourhood_cleansed                          | Neighbourhoud location of the listed property
+| guests_included                                 | Number of guests included within a listing 
+| extra_people                                    | Number of extra people allowed at the listing
+| minimum_nights                                  | The minimum amount of nights that a guest has to book regarding this listing
+| maximum_nights                                  | The maximum amount of nights that a guest is allowed to book regarding this listing
+| availability_30                                 | The amount of days for which a particular host is avialable in 30 days
+| instant_bookable                                | Whether guests can directly book without a inquiry
+| cancellation_policy                             | The set policy regarding guest cancellation 
+| require_guest_profile_picture                   | Whether the potential guest needs a profile picture in order to book the listing
+| require_guest_phone_verification                | Whether the potential guest needs a phone verificaiton in order to book the listing
+| calculated_host_listings_count                  | The number of total host listings
+| calculated_host_listings_count_entire_homes     | The number of total entire home listings of a specific host
+| calculated_host_listings_count_private_rooms    | The number of total private room listings of a specific host
+| calculated_host_listings_count_shared_rooms     | The number of total shared room listings of a specific host
+| wifi                                            | Whether WiFi is present within the property
+| pool                                            | Whether a pool is present within the property 
+| hot_tub                                         | Whether a hot tub is present within the property
+| tv                                              | Whether a tv is present within the property 
+| host_email                                      | Whether the host verified his email on Airbnb
+| host_phone                                      | Whether the host verified his phone on Airbnb
+| host_facebook                                   | Whether the host verified his Facebook account on Airbnb
+| host_government_id                              | Whether the host verified his government ID on Airbnb
+| host_years_active                               | Number of years the host is active on Airbnb
+
 
 ## Create train-test split
 
