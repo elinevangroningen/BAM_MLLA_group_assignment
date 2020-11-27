@@ -598,7 +598,7 @@ The performance on the test set for this model is:
 lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
 lasso_test_metrics
 ```
-As seen above, the final lasso model has mean absolute error of 0.27, root mean squared error of 0.37 and R squared on 48,7% on the test data.
+As seen above, the final lasso model has mean absolute error of 0.27, root mean square error of 0.37 and R squared of 48,7% on the test data.
 
 ### Variable importance
 
@@ -608,7 +608,7 @@ To assess the importance of the predictor variables, model parameter estimates a
 lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
 ```
 
-As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
+As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with a coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
 ## Random Forest
 
@@ -899,7 +899,7 @@ KNN, as a method, does not come with a prediction for the importance or coeffici
 
 In order to assess the performance of the three models the results of three metrics are compared. 
 
-1. Root mean squared error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals.
+1. Root mean square error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals.
     - $RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}{\Big(\frac{y_i - \hat{y_i}}{\sigma_i}\Big)^2}}$
 2. Mean absolute error. The objective is to minimize the result of this metric. This metric is more robust and therefore less sensitive to observations with large absolute residuals. However, because it uses the mean, it is therefore not insensitive to skewed distributions. 
     - $MAE = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y_i}|$
@@ -908,7 +908,7 @@ In order to assess the performance of the three models the results of three metr
 
 ## Assess appropriateness metrics 
 
-In order to check if the metrics are an appropriate fit, the residuals distributions of the models are plotted. Since the plots below show no large outliers and no skewed distributions, there are no implications for root mean squared error and mean absolute error. 
+In order to check if the metrics are an appropriate fit, the residuals distributions of the models are plotted. Since the plots below show no large outliers and no skewed distributions, there are no implications for root mean square error and mean absolute error. 
 ```{r echo = TRUE}
 # Generate predicted values for sales
 lasso_test_preds <- 
@@ -1014,7 +1014,7 @@ lasso_metrics_compare %>%
 
 # **Part 4: Recommendations**
 
-For this assignment we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest and finally a K-Nearest Neighbours model. The models are assessed on three different metrics, namely the root mean squared error (RMSE), the mean squared error (MAE) and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
+For this assignment we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest and finally a K-Nearest Neighbours model. The models are assessed on three different metrics, namely the root mean square error (RMSE), the mean absolute error (MAE) and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
 
 Furthermore, the variable importance of the random forest indicates which variables lead to the highest increase in R-squared. Accommodates, bedrooms and room_type are the most important variables for predicting the price. Bed_type, pool, and wifi are the least important for predicting the price. We therefore advise hosts to specifically look at the variables with a high importance, as these variables have the highest impact on their predicted price.
 
