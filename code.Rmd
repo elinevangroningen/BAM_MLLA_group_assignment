@@ -49,7 +49,7 @@ data <- read_csv(gzfile("listings.csv.gz"))
 
 ## Select variables of interest
 
-An important implication for variable selection is to avoid data leakages. You have data leakage when a feature is used for in the predictive models, that at the time of the prediction cannot be available. All variables including information on the reviews provide information about a listing after it has been published. Including this variables could be a potential source of data leakage. Therefore, these variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
+An important implication for variable selection is to avoid data leakages. Data leakage occurs for example when a feature is used in the predictive models, although it would not be available at the time of the prediction. All variables including information on the reviews provide information about a listing after it has been published. Including these variables could be a potential source of data leakage. Therefore, these variables are not included in the data set. Moreover, the variables including a description and summary about the listing can be analyzed using NLP (e.g. sentiment analysis). However, this is beyond the scope of the assignment. Therefore, these variables are excluded from the model. The variables below are included in the data set for further analysis and cleaning.
 ```{r message = FALSE}
 # Generate subset with variables of interest
 data_sub <- data %>%
@@ -123,7 +123,7 @@ data_sub$host_response_rate <-
 
 ### Clean amenities 
 
-The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and split it to a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
+The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and split it into a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
 ```{r}
 # Clean and split strings for amenities
 # Returns a list with all unique values
@@ -152,7 +152,7 @@ amenities_unique
 
 #### Create new variables based information stored in amenities
 
-Separate variables could be created from the vector containing all unique amenities.  However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some amenities are very specific and apply only to a few or one house. Yet, variables are created for some of the amenities that could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub* and *tv*. 
+Separate variables could be created from the vector containing all unique amenities.  However, since there are 130 usable amenities it seemed beyond the scope of the assignment. Moreover, some of the amenities contain information that is also given by other variables or about other amenities. For example, a private bathroom could also be a strong indicator that the listing is an entire house/apartment. Also, shampoo or shower gel could be strong indicators for the presence of a bathroom. Furthermore, some amenities are very specific and apply only to a few or one house. Yet, variables are created for some of the amenities that could have an influence on the price of a listing. We created variables for *wifi*, *pool*, *hot_tub*, and *tv*. 
 ```{r Create new variables for amenities}
 # Create variable for WIFI and add to data set
 wifi <- vector()
@@ -208,7 +208,7 @@ data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 
 ### Clean host verification methods
 
-The same reasoning from the *amenities* section above applies to the variable *host_verification*. The same cleaning method was used as for amenities, first we cleaned and split the strings, thereafter a vector with all unique host verification methods is generated.
+The same reasoning from the *amenities* section above applies to the variable *host_verification*. The same cleaning method was used as for amenities, first, we cleaned and split the strings, thereafter a vector with all unique host verification methods is generated.
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -238,7 +238,7 @@ verifications_unique
 
 #### Create variables based on information stored in host verifications
 
-Separate variables are created for the most common methods of verification, namely *email*, *phone*, *facebook* and *government_id*. 
+Separate variables are created for the most common methods of verification, namely *email*, *phone*, *facebook*, and *government_id*. 
 ```{r Create new variables for host verification method}
 # Create variable for host email and add to data set
 host_email <- vector()
@@ -303,7 +303,7 @@ data_sub <- data_sub %>%
 
 ### Inspect availability variables
 
-The variables *availability_30*, *availability_60*, *availability_90* and *availability_365* carry some of the same information. In order to inspect if all variables should be included in the data set, we plotted a correlation matrix. The plot below shows that all variables indicating the availability are strongly correlated. Therefore, only the variable *availability_30* is included for further analysis. 
+The variables *availability_30*, *availability_60*, *availability_90*, and *availability_365* carry some of the same information. In order to inspect if all variables should be included in the data set, we plotted a correlation matrix. The plot below shows that all variables indicating the availability are strongly correlated. Therefore, only the variable *availability_30* is included for further analysis. 
 ```{r}
 # Plot correlation matrix
 data_sub %>% select_if(is.numeric) %>% 
@@ -318,7 +318,7 @@ data_sub <-
 
 ### Check missing data
 
-In order to inspect which variables have missing cases, and how many there are in general, a table is constructed. The table shows the variables in the data set which contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values, like replacing NA-values with the mean or median, would not be appropriate as the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is not included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood* and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. Due to these findings, these variables are also excluded from the analyses. 
+In order to inspect which variables have missing cases, and how many there are in general, a table is constructed. The table shows the variables in the data set which contain missing values (in descending order). The table shows that the variable *square_feet* has $19662$ missing cases, which is about $98.19\%$. If we would have deleted the missing cases, the data set will barely contain any data. Moreover, other methods for handling missing values, like replacing NA-values with the mean or median, would not be appropriate as the variables will be based on only $1.81\%$ of the data. Therefore, *square_feet* is not included in the final. The variable *host_response_rate* has $9349$ missing cases, which is about $46.69\%$. The variable *host_neighbourhood* has $5972$, which is about $29.82\%$. The variable *cleaning_fee* has $3604$, which is about $18.00\%$. The variables  *host_response_rate*, *host_neighbourhood*, and *cleaning_fee* do not have as many missing values as *square_feet*, however, the same reasoning applies. Due to these findings, these variables are also excluded from the analyses. 
 ```{r Missing data check}
 # Count missing cases per variable
 na_counter <- sapply(data_sub, function(x) sum(is.na(x)))
@@ -333,7 +333,7 @@ na_values %>%
   arrange(desc(na_count))
 ```
 
-Moreover, a check is performed on the number of cases that contain missing values if the other values that have missing cases would be included in the 'final' data set. The table below shows that there are 206 cases which contain missing values, which is about $1.03\%$ of the entire data set. Since this is a very small proportion it is not very likely that deleting these cases would have a large impact on the predictions. Furthermore, all models that will be performed cannot handle missing values. Therefore, the cases with missing values are deleted. 
+Moreover, a check is performed on the number of cases that contain missing values if the other values that have missing cases would be included in the 'final' data set. The table below shows that there are 206 cases that contain missing values, which is about $1.03\%$ of the entire data set. Since this is a very small proportion it is not very likely that deleting these cases would have a large impact on the predictions. Furthermore, all models that will be performed cannot handle missing values. Therefore, the cases with missing values are deleted. 
 ```{r Incomplete cases}
 # Compute incomplete rows
 data_sub %>% 
@@ -377,14 +377,14 @@ The final data set consists of 19817 observations of 35 variables. The table bel
 | bed_type                                        | Type of bed present within the property
 | host_listings_count                             | Number of total listings of a host
 | host_response_time                              | Average time it takes for a host to respond
-| host_identity_verified                          | Whether a host verified his identify on Airbnb 
+| host_identity_verified                          | Whether a host verified his identity on Airbnb 
 | neighbourhood_cleansed                          | Neighborhood location of the listed property
 | guests_included                                 | Number of guests included within a listing 
 | extra_people                                    | Number of extra people allowed at the listing
 | minimum_nights                                  | The minimum amount of nights that a guest has to book regarding this listing
 | maximum_nights                                  | The maximum amount of nights that a guest is allowed to book regarding this listing
-| availability_30                                 | The amount of days for which a particular host is available in 30 days
-| instant_bookable                                | Whether guests can directly book without a inquiry
+| availability_30                                 | The number of days for which a particular host is available in 30 days
+| instant_bookable                                | Whether guests can directly book without an inquiry
 | cancellation_policy                             | The set policy regarding guest cancellation 
 | require_guest_profile_picture                   | Whether the potential guest needs a profile picture in order to book the listing
 | require_guest_phone_verification                | Whether the potential guest needs a phone verification in order to book the listing
@@ -405,7 +405,7 @@ The final data set consists of 19817 observations of 35 variables. The table bel
 
 ## Create train-test split
 
-For further analysis the data is split into a train-test set.
+For further analysis, the data is split into a train-test set.
 ```{r}
 # Create a train-split sets
 seed_x <-  123
@@ -417,7 +417,7 @@ data_test <- testing(data_split)
 
 ### Inspecting the predicted variable
 
-In order to prevent data leakages we only inspect the predicted variable *price* in the training set. In order to inspect *price* we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skewness make the data less interpretable and this could have an influence on performance of the models. 
+In order to prevent data leakages, we only inspect the predicted variable *price* in the training set. In order to inspect *price*, we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skewness make the data less interpretable and this could have an influence on the performance of the models. 
 ```{r}
 # Plot distribution price
 ggplot(data = data_train , aes(price)) +
@@ -429,7 +429,7 @@ ggplot(data = data_train , aes(price)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-In order to prevent these potential problems we created a new distribution plot with a log transformed variable *price*. The plot shows that the distribution is less skewed and does not contain many large outliers. Consequently, the data is more interpretable. Therefore, we will use the log transformed *price* for our models. 
+In order to prevent these potential problems, we created a new distribution plot with a log-transformed variable *price*. The plot shows that the distribution is less skewed and does not contain many large outliers. Consequently, the data is more interpretable. Therefore, we will use the log-transformed *price* for our models. 
 ```{r}
 # Plot distribution price
 ggplot(data = data_train , aes(log(price + 1))) +
@@ -526,7 +526,7 @@ grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = 1, length.out = 70)))
 ```
 
 ### Tuning lasso-penalized linear regression
-10-k-cross-validation is used to tune the lasso-penalized linear regression, and the metrics are plotted against the different values of $\lambda$.
+10-k cross-validation is used to tune the lasso-penalized linear regression, and the metrics are plotted against the different values of $\lambda$.
 ```{r}
  # Perform grid search over the tuning grid of penalty values
  lasso_tune <- lasso_wf %>% 
@@ -608,14 +608,14 @@ To assess the importance of the predictor variables, model parameter estimates a
 lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
 ```
 
-As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with a coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the Airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
+As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with a coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are the number of accommodates, the number of days that the Airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighborhood.
 
 ## Random Forest
 
 ### Random forest specification 
 
 #### Recipe
-Within this section, a random forest will be created. First a preprocessing recipe is created. 
+Within this section, a random forest will be created. First, a preprocessing recipe is created. 
 The id variable is updated to a separate role, instead of being a predictor. 
 ```{r Recipe}
 # Specify recipe
@@ -626,7 +626,7 @@ rf_recipe
 
 #### Tune specifications
 
-Within this section the tune specification are mentioned. The *mtry* is the number of features that are used at each split. The exact mtry value will be tuned later on. Different values for trees where tested (200, 500 & 1000). Increasing the amount of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
+Within this section, the tune specification are mentioned. The *mtry* is the number of features that are used at each split. The exact mtry value will be tuned later on. Different values for trees were tested (200, 500 & 1000). Increasing the number of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
 ```{r message=FALSE}
 # Tune specification
 rf_tune_spec <- rand_forest(mtry = tune(), trees = 200) %>%
@@ -648,12 +648,12 @@ A metric set is specified, which calculates the *Root Mean Square Error (RMSE)*,
 class_metrics <- metric_set(rmse, mae, rsq_trad)
 ```
 
-The command bellow allows us to do computations in parallel.
+The command below allows us to do computations in parallel.
 ```{r message=FALSE}
 registerDoParallel()
 ```
 
-The command grid = tibble(mtry = 1:33) was utlised, as this allows the random forest to consider all number of variables at each split. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is taken that will include the optimal values, as well mtry values of 1 up until 4 and a mtry of 10. This allows us to see that the mtry is initially increased up until it reaches its optimal mtry solution.  
+The command grid = tibble(mtry = 1:33) was utilized, as this allows the random forest to consider all number of variables at each split. Based on the MAE criteria, a mtry of 5, 6, 7, 8 & 9 was found as the optimal solution. Afterwards, a mtry of c(1:10)) is taken that will include the optimal values, as well as mtry values of 1 up until 4 and a mtry of 10. This allows us to see that the mtry is initially increased up until it reaches its optimal mtry solution.  
 ```{r message=FALSE}
 # Define the tune grid 
 rf_tunegrid <- tibble(mtry = c(1:10))
@@ -742,7 +742,7 @@ final_res %>%
 
 ### Variable importance 
 
-Now we try to asses the variable importance. We will refit the model based on our previous tune parameters. We previously found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, that this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
+Now we try to assess the variable importance. We will refit the model based on our previous tune parameters. We previously found an optimal mtry of 7, that's why the mtry is specified as 7. However, do keep in mind that because of the random element within a random forest, this initial value might alter. We noticed that the optimal mtry switches between 6, 7 & 8. 
 ```{r Refit}
 # Refit the model
 rf_model_vi <- rand_forest(mtry = 7, trees = 200) %>%
@@ -795,7 +795,7 @@ A mentioned, categorical variables are not included as there is no ranking withi
 | mae                    | 0.3093942                                                        
 | rsq_trad               | 0.3641607
 
-As the following section will show, this is an non-optimal result compared to not including the binary variables (see part 3). Therefore, it is chosen to remove all the categorical variables (implying the binary variables as well) from the KNN-model. Moreover, it should be kept in mind that how well a KNN-model works can decline when too many feature are added to the model. These points are all kept in mind in specifying the recipe for the KNN-model.
+As the following section will show, this is a non-optimal result compared to not including the binary variables (see part 3). Therefore, it is chosen to remove all the categorical variables (implying the binary variables as well) from the KNN-model. Moreover, it should be kept in mind that how well the KNN-model works can decline when too many features are added to the model. These points are all kept in mind in specifying the recipe for the KNN-model.
 ```{r}
 # Specify model 
 knn_mod <- 
@@ -897,7 +897,7 @@ KNN, as a method, does not come with a prediction for the importance or coeffici
 
 # **Part 3: Model Comparison**
 
-In order to assess the performance of the three models the results of three metrics are compared. 
+In order to assess the performance of the three models, the results of three metrics are compared. 
 
 1. Root mean square error. The objective is to minimize the result of this metric. An implication is that the metric is very sensitive to observations with large absolute residuals.
     - $RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}{\Big(\frac{y_i - \hat{y_i}}{\sigma_i}\Big)^2}}$
@@ -990,7 +990,7 @@ knn_residual_plot
 
 ## Assessment metrics
 
-The table below shows results for the metrics for the three models. When assessing the metrics and their objectives, the results show that the random forest model performs best on all metrics. Therefore, the random forest is considered to be the best model. 
+The table below shows the results for the metrics for the three models. When assessing the metrics and their objectives, the results show that the random forest model performs best on all metrics. Therefore, the random forest is considered to be the best model. 
 ```{r}
 # Generate table with 
 lasso_metrics_compare <- 
@@ -1014,11 +1014,11 @@ lasso_metrics_compare %>%
 
 # **Part 4: Recommendations**
 
-For this assignment we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest and finally a K-Nearest Neighbours model. The models are assessed on three different metrics, namely the root mean square error (RMSE), the mean absolute error (MAE) and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
+For this assignment, we assessed three models for predicting prices on the Airbnb platform. These three models are a lasso regularized linear regression, a random forest, and finally a K-Nearest Neighbours model. The models are assessed on three different metrics, namely the root mean square error (RMSE), the mean absolute error (MAE), and the r-squared. The proposed assessment metrics indicate that the random forest outperforms the lasso regularized linear regression and the K-Nearest-Neighbor in all proposed metrics.
 
-Furthermore, the variable importance of the random forest indicates which variables lead to the highest increase in R-squared. Accommodates, bedrooms and room_type are the most important variables for predicting the price. Bed_type, pool, and wifi are the least important for predicting the price. We therefore advise hosts to specifically look at the variables with a high importance, as these variables have the highest impact on their predicted price.
+Furthermore, the variable importance of the random forest indicates which variables lead to the highest increase in R-squared. Accommodates, bedrooms, and room_type are the most important variables for predicting the price. Bed_type, pool, and wifi are the least important for predicting the price. We therefore advise hosts to specifically look at the variables with high importance, as these variables have the highest impact on their predicted price.
 
-As the model performance metrics were used to compare the models and to select the best one, these metrics should not be used to estimate the generalization error, or how well the model would perform on completely new data. For this purpose, it is recommended that the random forest model will be further tested in an online environment before scaling up its implementation. Additionally, in practice, the model will provide the prediction in log prices, and this has to be converted to euros. For example, a log price prediction of 4.09 would reflect price of €59.74.
+As the model performance metrics were used to compare the models and to select the best one, these metrics should not be used to estimate the generalization error, or how well the model would perform on completely new data. For this purpose, it is recommended that the random forest model will be further tested in an online environment before scaling up its implementation. Additionally, in practice, the model will provide the prediction in log prices, and this has to be converted to euros. For example, a log price prediction of 4.09 would reflect a price of €59.74.
 
 How are these findings of use to Airbnb? Essentially, this project has sought to examine three approaches to competitively set listing prices of Airbnb listings. Considering our results, we advise Airbnb to use a random forest model in their projects that deal with optimal pricing of listings.  
 
