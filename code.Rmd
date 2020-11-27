@@ -462,8 +462,8 @@ data_folds <- vfold_cv(data_train, v = 10)
 data_folds
 ```
 
-### Remove data frames to avoid leakages and errors
 ```{r}
+# Remove data frames to avoid leakages and errors
 rm(data)
 rm(data_sub)
 rm(data_semi_final)
@@ -612,9 +612,8 @@ As lasso performs subset selection automatically, some variables have a coeffici
 
 ## Random Forest
 
-### Random forest specification 
+### Recipe specification 
 
-#### Recipe
 Within this section, a random forest will be created. First, a preprocessing recipe is created. 
 The id variable is updated to a separate role, instead of being a predictor. 
 ```{r Recipe}
@@ -624,7 +623,7 @@ rf_recipe <- recipe(price ~ ., data = data_train) %>%
 rf_recipe
 ```
 
-#### Tune specifications
+### Tuning specifications
 
 Within this section, the tune specification are mentioned. The *mtry* is the number of features that are used at each split. The exact mtry value will be tuned later on. Different values for trees were tested (200, 500 & 1000). Increasing the number of trees did not have much impact on the results. Therefore, a tree size of 200 is chosen to save computational time. 
 ```{r message=FALSE}
@@ -783,7 +782,7 @@ var_importance_plot
 knn_tune_grid <- tibble(neighbors = 1:50*2-1)
 ```
 
-### Specify a workflow 
+### Specify workflow 
 
 Something that should be noted for this recipe is that only numeric variables are included. This is done for the reason that categorical variables with more than two levels translate with difficulty to a k-nearest neighbor algorithm. The premise of prediction based on a KNN-model is that it relies exclusively on the distance between points in the data. This distance is obvious when handling numeric variables. However, when dealing with non-numeric values and variables this distance between data points cannot easily be modeled, provided they should be modeled at all. (This will have implications for determining predictions for importance and coefficients for variables, which will be addressed at the end of the section on the KNN-model).
 
