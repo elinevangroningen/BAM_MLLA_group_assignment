@@ -81,7 +81,7 @@ skim(data_sub) %>% knit_print()
 
 ### Basic cleaning
 
-First, we converted all categorical and logical variables, which did not need any further cleaning, to data type factor.
+First, we converted all categorical and logical variables, which did not need any further cleaning, to a data type factor.
 ```{r Converting vectors}
 # Convert categorical vars to factors 
 data_sub$property_type <- factor(data_sub$property_type , 
@@ -123,7 +123,7 @@ data_sub$host_response_rate <-
 
 ### Clean amenities 
 
-The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and splitted it to a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
+The variable *amenities* contains all the amenities of the listing. However, this was stored in one large string, and the elements could not be accessed separately. Therefore, we cleaned the string and split it to a list containing the separated elements. Furthermore, we extracted all unique amenities and stored these in a vector. 
 ```{r}
 # Clean and split strings for amenities
 # Returns a list with all unique values
@@ -208,7 +208,7 @@ data_sub$tv <- factor(data_sub$tv, levels = c("yes", "no"))
 
 ### Clean host verification methods
 
-The same reasoning from the *amenities* section above applies to the variable *host_verification*. The same cleaning method was used as for amenities, first we cleaned and splitted the strings, thereafter a vector with all unique host verification methods is generated.
+The same reasoning from the *amenities* section above applies to the variable *host_verification*. The same cleaning method was used as for amenities, first we cleaned and split the strings, thereafter a vector with all unique host verification methods is generated.
 ```{r Generate unique host verification methods}
 # Clean and split strings for host verification methods
 # Returns a list with all unique values
@@ -417,7 +417,7 @@ data_test <- testing(data_split)
 
 ### Inspecting the predicted variable
 
-In order to prevent data leakages we only inspect the predicted variable *price* in the training set. In order to inspect *price* we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skeweness make the data less interpretable and this could have an influence on performance of the models. 
+In order to prevent data leakages we only inspect the predicted variable *price* in the training set. In order to inspect *price* we have created a distribution plot. The plot shows that the data set contains some outliers and that the distribution is rightly skewed. Both the outliers and the skewness make the data less interpretable and this could have an influence on performance of the models. 
 ```{r}
 # Plot distribution price
 ggplot(data = data_train , aes(price)) +
@@ -608,7 +608,7 @@ To assess the importance of the predictor variables, model parameter estimates a
 lasso_wf_tuned %>% fit(data_train) %>% pull_workflow_fit() %>% tidy() 
 ```
 
-As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with a coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
+As lasso performs subset selection automatically, some variables have a coefficient of zero. There are multiple variables with a coefficient of zero, which implies that these variables are less important for the price prediction of new Airbnb listings. The most important variables can be identified by looking at the coefficients as well, and the 4 most important variables are number of accommodates, the number of days that the Airbnb is available inside 30 days, room type of entire home apartment, and lastly, Centrum-West neighbourhood.
 
 ## Random Forest
 
@@ -616,7 +616,7 @@ As lasso performs subset selection automatically, some variables have a coeffici
 
 #### Recipe
 Within this section, a random forest will be created. First a preprocessing recipe is created. 
-The id variable is updated to a seperate role, instead of being a predictor. 
+The id variable is updated to a separate role, instead of being a predictor. 
 ```{r Recipe}
 # Specify recipe
 rf_recipe <- recipe(price ~ ., data = data_train) %>%
